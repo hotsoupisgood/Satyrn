@@ -28,5 +28,5 @@ sig = signal.chirp(t, f0=10, t1=20,f1=30)
 # plot it
 plt.figure(figsize=(15,3))
 plt.plot(t,sig)
-plt.xlim([0,5])
+plt.savefig('static/plot0.png')plt.xlim([0,5])
 plt.xlabel('Time (s)'); plt.ylabel('Voltage (V)');
