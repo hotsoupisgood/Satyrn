@@ -1,5 +1,6 @@
 $(document).ready(function(){
-	var socket = io.connect('http://192.168.1.7:5001');
+//	var socket = io.connect('http://192.168.1.7:5001');
+	var socket = io();
 //	var socket = io.connect('http://' + document.domain + ':' + location.port + '/test');
 //   	var socket = io.connect('http://localhost:5000');
 	socket.on('connect', function() {
