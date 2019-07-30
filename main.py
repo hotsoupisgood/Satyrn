@@ -7,8 +7,8 @@ socketio = SocketIO(app)
 
 @app.route('/')
 def home():
-    return displayArray()
-#    return render_template('hello.html', jsloc, css = displayArray())
+#    return displayArray()
+    return render_template('hello.html', jsloc, css, body = displayArray())
 @socketio.on('connect')
 def test_connect():
     emit('after connect',  {'data':'Lets dance'})
