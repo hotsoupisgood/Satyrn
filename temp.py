@@ -1,11 +1,4 @@
-#:q
-###Hell###iiao#a;lsk;lkajd make the imports
-#Hello world
-###test
-#Hello
-#Hello world
-#lkj;lkj
-#test1
+#Hello#
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import io, signal # we will also import the signal module, from s
