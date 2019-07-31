@@ -1,25 +1,38 @@
 from flask import Flask, render_template, Markup
 from util import getHtml, duplicate, displayArray
 from flask_socketio import SocketIO, emit
+from multiprocessing import Process
+import os
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
 
 @app.route('/')
 def home():
-#    return displayArray()
-    return render_template('hello.html', jsloc, css, body = displayArray())
+    jsloc, css, body = displayArray()
+    return render_template('main.html', jsloc=jsloc, css=css, body=Markup(body))
 @socketio.on('connect')
 def test_connect():
     emit('after connect',  {'data':'Lets dance'})
-#@socketio.on('plz reload', namespace='/test')
-#def test_message(message):
-#    emit('reload', {'data': message['data']})
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0',port=5001, debug=True)
-    print('a;lsdfkj')
-    while True:
-        print('a;lsdfkj')
-        if os.path.getmtime('test.py')<=5:
-            test_message('hello')
+    def startModifiedCheck():
+        MYDIR = os.path.dirname(os.path.abspath(__file__))
+        print('Hello world')
+        while True:
+            if os.path.getmtime(os.path.join(MYDIR, 'test.py'))<=5:
+                emit('reload')
+                print('Send Help')
+    def startFlask():
+        socketio.run(app, port=5001, debug=True)
+    try:
+        flask=Process(target=startFlask)
+        flask.start()
+        modifiedCheck=Process(target=startModifiedCheck)
+        modifiedCheck.start()
+    except KeyboardInterrupt:
+        print("Terminating flask server.")
+        flask.terminate()
+        flask.join()
+        modifiedCheck.terminate()
+        modifiedCheck.join()

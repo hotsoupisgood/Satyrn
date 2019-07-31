@@ -16,14 +16,12 @@ def displayArray():
     subprocess.call([sys.executable, 'temp.py'])
 
     displayText=''
-    css='<head><script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script><script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" ></script><script type="text/javascript" src="'+url_for('static', filename='main.js')+'"></script><style>'+HtmlFormatter().get_style_defs('.highlight')+'body {margin: 20px 50px;}img{width:90vw;}</style></head>'
     for x in rawArray:
         displayText=displayText+highlight(''.join(x), PythonLexer(), HtmlFormatter())
         if plotCount>0:
             displayText+='<img src="'+url_for('static', filename='testplot.png')+'">'
             plotCount-=1
-    displayText='<body>'+displayText+'</body>'
-    return css+displayText
+    return url_for('static', filename='main.js'),HtmlFormatter().get_style_defs('.highlight'), displayText
 def getHtml(fileName):
     fs=open(fileName, 'r')
     
