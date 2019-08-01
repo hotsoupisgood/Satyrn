@@ -1,12 +1,13 @@
 from flask import Flask, render_template, Markup
-from util import getHtml, duplicate, displayArray
+from util import getHtml, duplicate, displayArray, startModifiedCheck
 from flask_socketio import SocketIO, emit
 from multiprocessing import Process
-import time
-import os
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
+
+#Initialize processes
+modifiedCheck=Process()
 
 @app.route('/')
 def home():
@@ -14,27 +15,21 @@ def home():
     return render_template('main.html', jsloc=jsloc, css=css, body=Markup(body))
 @socketio.on('connect')
 def connect():
+    modifiedCheck=Process(target=startModifiedCheck)
+    modifiedCheck.start()
     print('We are connected')
-    emit('after connect',  {'data':'Lets dance'})
+    
+        
+@socketio.on('disconnect')
+def disconnect():
+    modifiedCheck.terminate()
+    modifiedCheck.join()
+    print('Client disconnected')
 
 if __name__ == '__main__':
-    def startModifiedCheck():
-        myDir = os.path.dirname(os.path.abspath(__file__))
-        myFile='test.py'
-        fileLocation=os.path.join(myDir, myFile)
-        while True:
-            lastModified=os.path.getmtime(fileLocation)
-            timeSinceModified=int(time.time()-lastModified)
-            print(timeSinceModified)
-            time.sleep(2)
-            if timeSinceModified<=5:
-                emit('reload')
-                print('Send Help')
     def startFlask():
-        socketio.run(app, port=5001, debug=True)
+        socketio.run(app, port=5000, debug=True)
     try:
-        modifiedCheck=Process(target=startModifiedCheck)
-        modifiedCheck.start()
         flask=Process(target=startFlask)
         flask.start()
     except KeyboardInterrupt:

@@ -6,7 +6,22 @@ from flask import url_for
 from pygments import highlight
 from pygments.lexers import PythonLexer
 from pygments.formatters import HtmlFormatter
-
+from flask_socketio import emit
+import time
+import os
+def startModifiedCheck():
+    myDir = os.path.dirname(os.path.abspath(__file__))
+    myFile='test.py'
+    fileLocation=os.path.join(myDir, myFile)
+    while True:
+        lastModified=os.path.getmtime(fileLocation)
+        timeSinceModified=int(time.time()-lastModified)
+        print(timeSinceModified)
+        time.sleep(1)
+        if timeSinceModified<=1:
+            emit('reload')
+            time.sleep(5)
+            print('Send Help')
 def displayArray():
     fs=open('temp.py', 'w')
 
