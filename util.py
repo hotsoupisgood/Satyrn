@@ -1,45 +1,37 @@
 import importlib
+import glob
 import re
-import subprocess
+from subprocess import Popen, PIPE
 import sys
 from flask import url_for
 from pygments import highlight
 from pygments.lexers import PythonLexer
 from pygments.formatters import HtmlFormatter
-from flask_socketio import emit
+from flask_socketio import emit, SocketIO
 import time
 import os
-def startModifiedCheck():
-    myDir = os.path.dirname(os.path.abspath(__file__))
-    myFile='test.py'
-    fileLocation=os.path.join(myDir, myFile)
-    while True:
-        lastModified=os.path.getmtime(fileLocation)
-        timeSinceModified=int(time.time()-lastModified)
-        print(timeSinceModified)
-        time.sleep(1)
-        if timeSinceModified<=1:
-            emit('reload')
-            time.sleep(5)
-            print('Send Help')
-def displayArray():
+def displayArray(myFile):
     fs=open('temp.py', 'w')
 
-    rawArray=getHtml('test.py')
+    rawArray=getHtml(myFile)
     plotCount=rawArray.pop()
-    fs.write(duplicate(rawArray))
-    subprocess.call([sys.executable, 'temp.py'])
+    strCode=duplicate(rawArray)
+    fs.write(strCode)
+    process = Popen(['python3','-u', '-c', strCode], stdout=PIPE, stderr=PIPE)
+    stdout, stderr = process.communicate()
 
+    myDir = os.path.dirname(os.path.abspath(__file__))
+    allPlots=glob.glob(myDir+'/static/plot[0-9].png')
     displayText=''
     for x in rawArray:
         displayText=displayText+highlight(''.join(x), PythonLexer(), HtmlFormatter())
         if plotCount>0:
-            displayText+='<img src="'+url_for('static', filename='testplot.png')+'">'
+            displayText+='<img src="'+url_for('static', filename=os.path.basename(allPlots.pop()))+'">'
             plotCount-=1
-    return url_for('static', filename='main.js'),HtmlFormatter().get_style_defs('.highlight'), displayText
+    return url_for('static', filename='main.js'),HtmlFormatter().get_style_defs('.highlight'), displayText+'<pre>'+str(stdout)+'</pre>'+'<br><pre>'+str(stderr)+'</pre>'
 def getHtml(fileName):
     fs=open(fileName, 'r')
-    
+    myDir = os.path.dirname(os.path.abspath(__file__))
     newFile=[]
     newBlock=[]
     plotCount=0
@@ -47,7 +39,7 @@ def getHtml(fileName):
         if 'plt.plot' in line:
             plotCount+=1
             newBlock.append(line)
-            newBlock.append("plt.savefig('static/plot"+str(len(newFile))+".png')")
+            newBlock.append("plt.savefig('"+myDir+"/static/plot"+str(len(newFile))+".png')\n")
             newFile.append(newBlock)
             newBlock=[]
         else:
