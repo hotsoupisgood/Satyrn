@@ -7,6 +7,9 @@ from multiprocessing import Process
 import time
 import os
 import sys
+import webbrowser
+
+url = 'localhost:5000'
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -17,8 +20,8 @@ fileLocation=myFile
 
 @app.route('/')
 def home():
-    jsloc, css, body = displayArray(myFile)
-    return render_template('main.html', jsloc=jsloc, css=css, body=Markup(body))
+    jsloc, css, body, stdout, stderr = displayArray(myFile)
+    return render_template('main.html', jsloc=jsloc, css=css, body=Markup(body), stderr=stderr, stdout=stdout)
 @socketio.on('connect')
 def connect():
     print('Connected to client')
@@ -42,11 +45,7 @@ if __name__ == '__main__':
         flask=Process(target=startFlask)
         flask.start()
     except KeyboardInterrupt:
-        try:
-            os.remove(a)
-        except OSError as e: # name the Exception `e`
-            print("Failed with:", e.strerror) # look what it says
-            print("Error code:", e.code)
         print("Terminating flask server.")
         flask.terminate()
         flask.join()
+    webbrowser.open_new_tab(url)

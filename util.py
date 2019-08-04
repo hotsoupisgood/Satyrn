@@ -5,7 +5,7 @@ from subprocess import Popen, PIPE
 import sys
 from flask import url_for
 from pygments import highlight
-from pygments.lexers import PythonLexer
+from pygments.lexers import BashLexer, PythonLexer
 from pygments.formatters import HtmlFormatter
 from flask_socketio import emit, SocketIO
 import time
@@ -19,6 +19,8 @@ def displayArray(myFile):
     fs.write(strCode)
     process = Popen(['python3','-u', '-c', strCode], stdout=PIPE, stderr=PIPE)
     stdout, stderr = process.communicate()
+    stdout=stdout.decode('utf-8')
+    stderr=stderr.decode('utf-8')
 
     myDir = os.path.dirname(os.path.abspath(__file__))
     allPlots=glob.glob(myDir+'/static/plot[0-9].png')
@@ -28,7 +30,7 @@ def displayArray(myFile):
         if plotCount>0:
             displayText+='<img src="'+url_for('static', filename=os.path.basename(allPlots.pop()))+'">'
             plotCount-=1
-    return url_for('static', filename='main.js'),HtmlFormatter().get_style_defs('.highlight'), displayText+'<pre>'+str(stdout)+'</pre>'+'<br><pre>'+str(stderr)+'</pre>'
+    return url_for('static', filename='main.js'),HtmlFormatter().get_style_defs('.highlight'), displayText, str(stdout), str(stderr)
 def getHtml(fileName):
     fs=open(fileName, 'r')
     myDir = os.path.dirname(os.path.abspath(__file__))
