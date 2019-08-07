@@ -8,6 +8,12 @@ import time
 import os
 import sys
 import webbrowser
+import argparse
+
+parser = argparse.ArgumentParser(description='Display python information live in browser.')
+parser.add_argument('file', metavar='F',
+                            help='python file to run')
+args = parser.parse_args()
 
 url = 'localhost:5000'
 
@@ -15,13 +21,13 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
 
-myFile=sys.argv[-1]
+myFile=args.file
 fileLocation=myFile
 
 @app.route('/')
 def home():
     jsloc, css, body, stdout, stderr = displayArray(myFile)
-    return render_template('main.html', jsloc=jsloc, css=css, body=Markup(body), stderr=stderr, stdout=stdout)
+    return render_template('main.html', jsloc=jsloc, css=css, body=Markup(body), stderr=Markup(stderr), stdout=Markup(stdout))
 @socketio.on('connect')
 def connect():
     print('Connected to client')

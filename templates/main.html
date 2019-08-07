@@ -5,14 +5,19 @@
 	<style>
 		{{css}}
 		body {margin: 20px 50px;}
-		img{width:90vw;}
-		termout{color:red;}
+		img{max-width:50em;}
+		stdout{color:blue;}
+		stderr{color:red;}
 	</style>
 </head>
 <body>
 	<termout>
-	<stdout>{{stdout}}</stdout>
-	<stderr>{{stderr}}</stderr>
+	{% if stdout|length>1 %}
+	<stdout>Standard Output:<br>{{stdout}}</stdout>
+	{% endif %}
+	{% if stdout|length>1: %}
+	<stderr>Standard Error:<br>{{stderr}}</stderr>
+	{% endif %}
 	</termout>
 	{{body}}
 </body>

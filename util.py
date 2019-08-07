@@ -11,12 +11,10 @@ from flask_socketio import emit, SocketIO
 import time
 import os
 def displayArray(myFile):
-    fs=open('temp.py', 'w')
 
     rawArray=getHtml(myFile)
     plotCount=rawArray.pop()
     strCode=duplicate(rawArray)
-    fs.write(strCode)
     process = Popen(['python3','-u', '-c', strCode], stdout=PIPE, stderr=PIPE)
     stdout, stderr = process.communicate()
     stdout=stdout.decode('utf-8')
@@ -30,7 +28,7 @@ def displayArray(myFile):
         if plotCount>0:
             displayText+='<img src="'+url_for('static', filename=os.path.basename(allPlots.pop()))+'">'
             plotCount-=1
-    return url_for('static', filename='main.js'),HtmlFormatter().get_style_defs('.highlight'), displayText, str(stdout), str(stderr)
+    return url_for('static', filename='main.js'),HtmlFormatter().get_style_defs('.highlight'), displayText, highlight(stdout, BashLexer(), HtmlFormatter()), highlight(stderr, BashLexer(), HtmlFormatter())
 def getHtml(fileName):
     fs=open(fileName, 'r')
     myDir = os.path.dirname(os.path.abspath(__file__))
@@ -38,7 +36,7 @@ def getHtml(fileName):
     newBlock=[]
     plotCount=0
     for line in fs:
-        if 'plt.plot' in line:
+        if 'plt.plot' in line and '#plt.plot' not in line:
             plotCount+=1
             newBlock.append(line)
             newBlock.append("plt.savefig('"+myDir+"/static/plot"+str(len(newFile))+".png')\n")
