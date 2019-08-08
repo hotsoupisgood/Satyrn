@@ -1,0 +1,23 @@
+<head>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+	<script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" ></script>
+	<script type="text/javascript" src="{{jsloc}}"></script>
+	<style>
+		{{css}}
+		body {margin: 20px 50px;}
+		img{max-width:50em;}
+		stdout{color:blue;}
+		stderr{color:red;}
+	</style>
+</head>
+<body>
+	<termout>
+	{% if stdout|length>1 %}
+	<stdout>Standard Output:<br>{{stdout}}</stdout>
+	{% endif %}
+	{% if stdout|length>1: %}
+	<stderr>Standard Error:<br>{{stderr}}</stderr>
+	{% endif %}
+	</termout>
+	{{body}}
+</body>
