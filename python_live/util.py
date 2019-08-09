@@ -18,9 +18,13 @@ def displayArray(myFile):
     stdout, stderr = process.communicate()
     stdout=stdout.decode('utf-8')
     stderr=stderr.decode('utf-8')
+    print(stderr)
 
     myDir = os.path.dirname(os.path.abspath(__file__))
     allPlots=glob.glob(myDir+'/static/plot[0-9].png')
+    print('Directory:'+myDir)
+#    myDir = os.path.expanduser('~/staticlivepy')
+#    allPlots=glob.glob(myDir+'/plot[0-9].png')
     displayText=''
     for x in rawArray:
         displayText=displayText+highlight(''.join(x), PythonLexer(), HtmlFormatter())
@@ -31,6 +35,7 @@ def displayArray(myFile):
 def getHtml(fileName):
     fs=open(fileName, 'r')
     myDir = os.path.dirname(os.path.abspath(__file__))
+#    myDir = '~/staticlivepy'
     newFile=[]
     newBlock=[]
     plotCount=0
@@ -39,6 +44,7 @@ def getHtml(fileName):
             plotCount+=1
             newBlock.append(line)
             newBlock.append("plt.savefig('"+myDir+"/static/plot"+str(len(newFile))+".png')\n")
+#            newBlock.append("plt.savefig('"+os.path.join(myDir,"/plot",str(len(newFile))+".png')")+"\n")
             newFile.append(newBlock)
             newBlock=[]
         else:

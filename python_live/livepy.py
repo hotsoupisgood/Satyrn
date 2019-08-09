@@ -1,6 +1,8 @@
+#!/usr/bin/env python3
 from flask import Flask, render_template, Markup
-#from util import getHtml, duplicate, displayArray
-from python_live.util.util import getHtml, duplicate, displayArray
+#from .util import getHtml, duplicate, displayArray
+import python_live.util
+#from python_live.util.util import getHtml, duplicate, displayArray
 from flask_socketio import SocketIO, emit
 from multiprocessing import Process
 import time
@@ -25,7 +27,7 @@ fileLocation=myFile
 
 @app.route('/')
 def home():
-    jsloc, css, body, stdout, stderr = displayArray(myFile)
+    jsloc, css, body, stdout, stderr = python_live.util.displayArray(myFile)
     return render_template('main.html', jsloc=jsloc, css=css, body=Markup(body), stderr=Markup(stderr), stdout=Markup(stdout))
 @socketio.on('connect')
 def connect():

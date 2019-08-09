@@ -1,4 +1,2 @@
-include README.rst
-graft flaskr/static
-graft flaskr/templates
+graft python-live/static
 global-exclude *.pyc
