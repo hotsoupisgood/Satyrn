@@ -1,2 +1,0 @@
-graft python-live/static
-global-exclude *.pyc
