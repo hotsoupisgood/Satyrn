@@ -15,16 +15,15 @@ setup(
                 },
         packages=find_packages(),
 #        ['python_live', 'python_live/util', 'python_live/static', 'python_live/templates'],
-#        install_requires=[
-#            'flask',
-#            'flask_socketio',
-#            'pygments'
-#            ],
+        install_requires=[
+            'flask',
+            'flask_socketio',
+            'pygments'
+            ],
         zip_safe=False,
         entry_points={
             'console_scripts': [
                 'livepy = python_live.livepy:main',
                 ]
             }
-#        scripts=['bin/livepy'],
         )
