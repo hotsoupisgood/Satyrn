@@ -47,6 +47,8 @@ def getHtml(fileName):
     for line in fs:
         if len(newBlock)>1:
             lastLine= newBlock.pop()
+            if '####' in lastLine:
+                break
             if '###p' in lastLine:
                 if '.legend' in line:
                     plotCount+=1
