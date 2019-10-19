@@ -38,6 +38,20 @@ def displayArray(myFile):
         for x in allPlots:
             displayText+='<img src="'+url_for('static', filename=os.path.basename(x))+'">'
     return url_for('static', filename='main.js'),HtmlFormatter().get_style_defs('.highlight'), displayText, highlight(stdout, BashLexer(), HtmlFormatter()), highlight(stderr, BashLexer(), HtmlFormatter())
+def updateLedger(userFile, ledger):
+    fs=open(fileName, 'r')
+    myDir = os.path.dirname(os.path.abspath(__file__))
+    newFile=[]
+    newBlock=[]
+    for line in fs:
+        newBlock.append(line)
+    allCells=[]
+    cellDelimiter='####'
+    def GetTheSentences(infile):
+         with open(infile) as fp:
+             for result in re.findall(cellDelimiter+'(.*?)'+cellDelimiter, fp.read(), re.S):
+                 allCells.append(result)
+
 def getHtml(fileName):
     fs=open(fileName, 'r')
     myDir = os.path.dirname(os.path.abspath(__file__))
