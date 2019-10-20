@@ -1,4 +1,7 @@
+####
 import glob
+from hashlib import md5
+from io import StringIO
 import re
 from subprocess import Popen, PIPE
 import sys
@@ -9,8 +12,12 @@ from pygments.formatters import HtmlFormatter
 from flask_socketio import emit, SocketIO
 import time
 import os
-def displayArray(myFile):
 
+ledger = {}
+myDir = os.path.dirname(os.path.abspath(__file__))
+####
+
+def displayArray(myFile):
     myDir = os.path.dirname(os.path.abspath(__file__))
     allPlots=sorted(glob.glob(myDir+'/static/plot[0-9].png'), key=os.path.getmtime)
     print(allPlots)
@@ -38,55 +45,43 @@ def displayArray(myFile):
         for x in allPlots:
             displayText+='<img src="'+url_for('static', filename=os.path.basename(x))+'">'
     return url_for('static', filename='main.js'),HtmlFormatter().get_style_defs('.highlight'), displayText, highlight(stdout, BashLexer(), HtmlFormatter()), highlight(stderr, BashLexer(), HtmlFormatter())
-def updateLedger(userFile, ledger):
-    fs=open(fileName, 'r')
-    myDir = os.path.dirname(os.path.abspath(__file__))
-    newFile=[]
-    newBlock=[]
-    for line in fs:
-        newBlock.append(line)
-    allCells=[]
-    cellDelimiter='####'
-    def GetTheSentences(infile):
-         with open(infile) as fp:
-             for result in re.findall(cellDelimiter+'(.*?)'+cellDelimiter, fp.read(), re.S):
-                 allCells.append(result)
-
-def getHtml(fileName):
-    fs=open(fileName, 'r')
-    myDir = os.path.dirname(os.path.abspath(__file__))
-    newFile=[]
-    newBlock=[]
+def addSavePlot(fileString):
+    fileArrayWithPlot=[]
     plotCount=0
-    for line in fs:
-        if len(newBlock)>1:
-            lastLine= newBlock.pop()
-            if '####' in lastLine:
-                break
-            if '###p' in lastLine:
-                if '.legend' in line:
-                    plotCount+=1
-                    newBlock.append(lastLine)
-                    newBlock.append(line)
-                    newBlock.append("plt.savefig('"+myDir+"/static/plot"+str(len(newFile))+".png')\n")
-                    newFile.append(newBlock)
-                    newBlock=[]
-                else:
-                    plotCount+=1
-                    newBlock.append(lastLine)
-                    newBlock.append("plt.savefig('"+myDir+"/static/plot"+str(len(newFile))+".png')\n")
-                    newFile.append(newBlock)
-                    newBlock=[]
-                    newBlock.append(line)
-            else:
-                newBlock.append(lastLine)
-                newBlock.append(line)
-
+    for line in fileString.split():
+        if '###p' in line:
+            fileArrayWithPlot.append("plt.savefig('"+myDir+"/static/plot"+str(plotCount)+".png')\n")
+            plotCount+=1
         else:
-            newBlock.append(line)
-    newFile.append(newBlock)
-    newFile.append(plotCount)
-    return newFile
+            fileArrayWithPlot.append(line)
+    flatArray='\n'.join(fileArrayWithPlot)
+    return flatArray
+
+def updateLedger(fileString, ledger):
+    allCellsDict={}
+    newCellsToRun=[]
+    cellDelimiter='####'
+    regex='(.*?)(?=\n####\n)'
+    for cell in re.findall(regex, fileString, re.S):
+        cellHash=md5(cell.encode()).hexdigest()
+        allCellsDict[cellHash]=cell
+    for cellHash in allCellsDict.keys():
+        if cellHash not in ledger:
+            newCellsToRun.append(cellHash)
+            ledger[cellHash]=allCellsDict[cellHash]
+    return newCellsToRun, ledger
+ledgerScope={}
+def doit():
+    ledger={}
+    newCellsToRun, ledger=updateLedger('test.py', ledger)
+    runNewCells(newCellsToRun, ledger)
+def runNewCells(newCellsToRun, ledger):
+    for cell in newCellsToRun:
+        cellToRun=ledger[cell]
+        cellToRun=addSavePlot(cellToRun)
+        exec(cellToRun, globals(), ledgerScope)
+doit()
+####
 def  duplicate(structure):
     assembledText=''
     for x in structure:
