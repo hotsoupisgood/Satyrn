@@ -48,23 +48,22 @@ def displayArray(myFile):
 def addSavePlot(fileString):
     fileArrayWithPlot=[]
     plotCount=0
-    for line in fileString.split():
-        if '###p' in line:
-            fileArrayWithPlot.append("plt.savefig('"+myDir+"/static/plot"+str(plotCount)+".png')\n")
-            plotCount+=1
-        else:
-            fileArrayWithPlot.append(line)
-    flatArray='\n'.join(fileArrayWithPlot)
-    return flatArray
-
+    savefigText="plt.savefig('"+myDir+"/static/plot"+str(plotCount)+".png')"
+    match = re.compile(r"###p")
+    items = re.findall(match, fileString)
+    for item in items:
+        savefigText="plt.savefig('"+myDir+"/static/plot"+str(plotCount)+".png')"
+        fileString=fileString.replace(item, savefigText)
+        plotCount+=1
+    return fileString 
 def updateLedger(fileString, ledger):
     allCellsDict={}
     newCellsToRun=[]
-    cellDelimiter='####'
-    regex='(.*?)(?=\n####\n)'
-    for cell in re.findall(regex, fileString, re.S):
-        cellHash=md5(cell.encode()).hexdigest()
-        allCellsDict[cellHash]=cell
+    cellDelimiter='####\n'
+    for cell in fileString.split(cellDelimiter):
+        if len(cell)>0:
+            cellHash=md5(cell.encode()).hexdigest()
+            allCellsDict[cellHash]=cell
     for cellHash in allCellsDict.keys():
         if cellHash not in ledger:
             newCellsToRun.append(cellHash)
@@ -72,14 +71,31 @@ def updateLedger(fileString, ledger):
     return newCellsToRun, ledger
 ledgerScope={}
 def doit():
+    testContent=''
+    with open('test.py', 'r') as content_file:
+        testContent=content_file.read()
     ledger={}
-    newCellsToRun, ledger=updateLedger('test.py', ledger)
-    runNewCells(newCellsToRun, ledger)
+    newCellsToRun, ledger=updateLedger(testContent, ledger)
+    print(runNewCells(newCellsToRun, ledger))
 def runNewCells(newCellsToRun, ledger):
+    cellOutput={}
+    print(ledger)
     for cell in newCellsToRun:
         cellToRun=ledger[cell]
         cellToRun=addSavePlot(cellToRun)
+#        print(cellToRun)
+#        old_stdout=sys.stdout
+#        old_stderr=sys.stderr
+#        buffer = StringIO()
+#        sys.stdout = buffer
+        redirected_output=sys.stdout=StringIO()
+        redirected_error=sys.stderr=StringIO()
         exec(cellToRun, globals(), ledgerScope)
+        sys.stdout=sys.__stdout__
+#        print(repr(buffer))
+        sys.stderr=sys.__stderr__
+        cellOutput[cell]={'stdout':redirected_output.getvalue(), 'stderr':redirected_error.getvalue()}
+    return cellOutput
 doit()
 ####
 def  duplicate(structure):
