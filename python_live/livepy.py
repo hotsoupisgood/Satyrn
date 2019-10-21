@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 from flask import Flask, render_template, Markup, Response
-#from .util import getHtml, duplicate, displayArray
 import python_live.util
-#from python_live.util.util import getHtml, duplicate, displayArray
 from flask_socketio import SocketIO, emit
 from multiprocessing import Process
 import time
@@ -25,11 +23,14 @@ socketio = SocketIO(app)
 
 myFile=args.file
 fileLocation=myFile
+ledgerScope={}
+ledger=[]
+myDir=os.path.dirname(os.path.abspath(__file__))
 
 @app.route('/')
 def home():
-    jsloc, css, body, stdout, stderr = python_live.util.displayArray(myFile)
-    response=Response(render_template('main.html', jsloc=jsloc, css=css, body=Markup(body), stderr=Markup(stderr), stdout=Markup(stdout))
+    jsloc, css, body=python_live.util.update(myFile, ledger, ledgerScope, myDir)
+    response=Response(render_template('main.html', jsloc=jsloc, css=css, body=Markup(body), stderr=Markup(''), stdout=Markup(''))
 )
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate" # HTTP 1.1.
     response.headers["Pragma"] = "no-cache" # HTTP 1.0.

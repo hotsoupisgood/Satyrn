@@ -1,4 +1,5 @@
-####
+from itertools import zip_longest
+import datetime
 import glob
 from hashlib import md5
 from io import StringIO
@@ -13,39 +14,19 @@ from flask_socketio import emit, SocketIO
 import time
 import os
 
-ledger = {}
-myDir = os.path.dirname(os.path.abspath(__file__))
-####
 
-def displayArray(myFile):
-    myDir = os.path.dirname(os.path.abspath(__file__))
-    allPlots=sorted(glob.glob(myDir+'/static/plot[0-9].png'), key=os.path.getmtime)
-    print(allPlots)
-    for f in allPlots:
-        os.remove(f)
-    rawArray=getHtml(myFile)
-    plotCount=rawArray.pop()
-    strCode=duplicate(rawArray)
-    process = Popen(['python3','-u', '-c', strCode], stdout=PIPE, stderr=PIPE)
-    stdout, stderr = process.communicate()
-    stdout=stdout.decode('utf-8')
-    stderr=stderr.decode('utf-8')
-
-    allPlots=glob.glob(myDir+'/static/plot[0-9].png')
-    allPlots.sort(key=os.path.getmtime)
-    allPlots.reverse()
-    plotCount=len(allPlots)
-    displayText=''
-    for x in rawArray:
-        displayText=displayText+highlight(''.join(x), PythonLexer(), HtmlFormatter())
-        if plotCount>0:
-            displayText+='<img src="'+url_for('static', filename=os.path.basename(allPlots.pop()))+'">'
-            plotCount-=1
-    if plotCount>0:
-        for x in allPlots:
-            displayText+='<img src="'+url_for('static', filename=os.path.basename(x))+'">'
-    return url_for('static', filename='main.js'),HtmlFormatter().get_style_defs('.highlight'), displayText, highlight(stdout, BashLexer(), HtmlFormatter()), highlight(stderr, BashLexer(), HtmlFormatter())
-def addSavePlot(fileString):
+def update(watchedFile, ledger, ledgerScope, myDir):
+    testContent=''
+    with open(watchedFile, 'r') as content_file:
+        testContent=content_file.read()
+    newCellsToRun, ledger=updateLedgerPop(testContent, ledger, myDir)
+    print(newCellsToRun)
+    output=runNewCells(newCellsToRun, ledger, ledgerScope, myDir)
+    print(output)
+    mainHtml, cssHtml, bodyHtml=convertLedgerToHtml(ledger, output, myDir)
+    print(bodyHtml)
+    return mainHtml, cssHtml, bodyHtml
+def addSavePlot(fileString, myDir):
     fileArrayWithPlot=[]
     plotCount=0
     savefigText="plt.savefig('"+myDir+"/static/plot"+str(plotCount)+".png')"
@@ -54,52 +35,45 @@ def addSavePlot(fileString):
     for item in items:
         savefigText="plt.savefig('"+myDir+"/static/plot"+str(plotCount)+".png')"
         fileString=fileString.replace(item, savefigText)
-        plotCount+=1
     return fileString 
-def updateLedger(fileString, ledger):
-    allCellsDict={}
+def updateLedgerPop(fileString, ledger, myDir):
+    allCellsList=[]
     newCellsToRun=[]
     cellDelimiter='####\n'
-    for cell in fileString.split(cellDelimiter):
-        if len(cell)>0:
-            cellHash=md5(cell.encode()).hexdigest()
-            allCellsDict[cellHash]=cell
-    for cellHash in allCellsDict.keys():
-        if cellHash not in ledger:
-            newCellsToRun.append(cellHash)
-            ledger[cellHash]=allCellsDict[cellHash]
-    return newCellsToRun, ledger
-ledgerScope={}
-def doit():
-    testContent=''
-    with open('test.py', 'r') as content_file:
-        testContent=content_file.read()
-    ledger={}
-    newCellsToRun, ledger=updateLedger(testContent, ledger)
-    print(runNewCells(newCellsToRun, ledger))
-def runNewCells(newCellsToRun, ledger):
-    cellOutput={}
+    for cell in list(filter(None, fileString.split(cellDelimiter))):
+        cellHash=md5(cell.encode()).hexdigest()
+        allCellsList.append({'hash':cellHash, 'code':cell, 'datetime':datetime.datetime.now()})
+    newCellsToRun=[currentCell if currentCell!=ledgerCell else None for currentCell, ledgerCell in zip_longest(allCellsList, ledger, fillvalue=None)]
+    return newCellsToRun, allCellsList
+def convertLedgerToHtml(ledger, std, myDir):
+    allPlots=glob.glob(myDir+'/static/plot[0-9].png')
+    allPlots.sort(key=os.path.getmtime)
+    allPlots.reverse()
+    plotCount=len(allPlots)
+    displayText=''
+    for cell in ledger:
+        cellStd=std.pop(0)
+        displayText+=highlight(cell['code'], PythonLexer(), HtmlFormatter())
+        displayText+=highlight(cellStd['stdout'], BashLexer(), HtmlFormatter())
+        displayText+=highlight(cellStd['stderr'], BashLexer(), HtmlFormatter())
+        displayText+='<img src="'+url_for('static', filename=os.path.basename(allPlots.pop()))+'">'
+    cssCode=HtmlFormatter().get_style_defs('.highlight')
+    mainUrl=url_for('static', filename='main.js')
+    return mainUrl, cssCode, displayText
+def runNewCells(newCellsToRun, ledger, ledgerScope, myDir):
+    cellOutput=[]
     print(ledger)
     for cell in newCellsToRun:
-        cellToRun=ledger[cell]
-        cellToRun=addSavePlot(cellToRun)
-#        print(cellToRun)
-#        old_stdout=sys.stdout
-#        old_stderr=sys.stderr
-#        buffer = StringIO()
-#        sys.stdout = buffer
+        cellToRun=addSavePlot(cell['code'], myDir)
         redirected_output=sys.stdout=StringIO()
         redirected_error=sys.stderr=StringIO()
-        exec(cellToRun, globals(), ledgerScope)
-        sys.stdout=sys.__stdout__
-#        print(repr(buffer))
-        sys.stderr=sys.__stderr__
-        cellOutput[cell]={'stdout':redirected_output.getvalue(), 'stderr':redirected_error.getvalue()}
+        try:
+            exec(cellToRun, globals(), ledgerScope)
+            cellOutput.append({'stdout':redirected_output.getvalue(), 'stderr':redirected_error.getvalue()})
+        except Exception as e:
+            cellOutput.append({'stdout':redirected_output.getvalue(), 'stderr':str(e)})
+        finally:
+            sys.stdout=sys.__stdout__
+            sys.stderr=sys.__stderr__
+
     return cellOutput
-doit()
-####
-def  duplicate(structure):
-    assembledText=''
-    for x in structure:
-        assembledText=assembledText+''.join(x)
-    return assembledText
