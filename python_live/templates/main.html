@@ -1,31 +1,29 @@
 <head>
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 	<script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" ></script>
+	<link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles.css') }}">
 	<script type="text/javascript" src="{{jsloc}}"></script>
 	<style>
-		{{css}}
-		body {margin: 20px 50px;}
-		img{
-			max-width:20em;
-			max-width:50em;
-		}
-		termout {
-			overflow-wrap: break-word;
-		}
-		stdout{
-			color:blue;
-		}
-		stderr{color:red;}
+{{css}}
 	</style>
 </head>
 <body>
+	{% for cell in body %}
+	<cell id={{cell['hash']}}>
+	<top>
+	{{cell['datetime']}}
+	</top>
+	<maincode>
+	{{cell['code'] | safe }}
+	</maincode>
 	<termout>
-	{% if stdout|length>1 %}
-	<stdout>Standard Output:<br>{{stdout}}</stdout>
+	{% if cell['stdout']|length>0 %}
+	<stdout>Standard Output:<br>{{cell['stdout'] | safe }}</stdout>
 	{% endif %}
-	{% if stdout|length>1: %}
-	<stderr>Standard Error:<br>{{stderr}}</stderr>
+	{% if cell['stderr']|length>0 %}
+	<stderr>Standard Error:<br>{{cell['stderr'] | safe }}</stderr>
 	{% endif %}
 	</termout>
-	{{body}}
+	</cell>
+	{% endfor %}
 </body>
