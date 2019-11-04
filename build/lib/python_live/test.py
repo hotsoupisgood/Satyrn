@@ -1,9 +1,7 @@
 ####
-print('hello world')
-
-
+x=4
 ####
-hihihi
-print('$fucik')
+
+print(x-9)
 
 ####

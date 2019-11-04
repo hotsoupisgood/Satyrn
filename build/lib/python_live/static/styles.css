@@ -1,0 +1,45 @@
+body {
+	display: flex;
+	flex-direction: column;
+	margin: 20px 50px;
+	font-family: sans-serif;
+}
+img {
+	max-width:20em;
+	max-width:50em;
+}
+cell {
+	display: flex;
+	margin-bottom: 15px;
+	flex-direction: column;
+	border: 1px solid lightgray;
+	border-radius: 3px;
+}
+cell top {
+	font-size: .7em;
+	background: lightgray;
+	color: gray;
+	padding: 4px;
+}
+cell maincode {
+	padding: 3px;
+}
+termout {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	font-size: .7em;
+	padding: 8px;
+	overflow-wrap: break-word;
+	background: lightgray;
+}
+cell termout pre {
+	background: lightgray;
+	margin: 4px 0px;
+}
+stdout{
+	color:blue;
+}
+stderr{
+	color:red;
+}
