@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from pygments.formatters import HtmlFormatter
 from flask import Flask, render_template, Markup, Response, g
 import python_live.util
 from flask_socketio import SocketIO, emit
@@ -27,12 +28,8 @@ ledger=[]
 myDir=os.path.dirname(os.path.abspath(__file__))
 @app.route('/')
 def home():
-#    jsloc, css, body=python_live.util.update(myFile, ledger, ledgerScope, myDir)
-    testContent=''
-    with open(watchedFile, 'r') as content_file:
-        testContent=content_file.read()
-    newCellsToRun, allCellsList=python_live.util.updateLedgerPop(testContent, ledger, myDir)
-    response=Response(render_template('main.html', jsloc=jsloc, css=css, body=body))
+    css=HtmlFormatter().get_style_defs('.highlight')
+    response=Response(render_template('main.html', css=css))
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate" # HTTP 1.1.
     response.headers["Pragma"] = "no-cache" # HTTP 1.0.
     response.headers["Expires"] = "0" # Proxies
@@ -40,6 +37,7 @@ def home():
 @socketio.on('connect')
 def connect():
     print('Connected to client')
+    update()
 @socketio.on('disconnect')
 def disconnect():
     print('Client disconnected')
@@ -48,19 +46,17 @@ def checkOnUpdate():
     lastModified=os.path.getmtime(fileLocation)
     timeSinceModified=int(time.time()-lastModified)
     if timeSinceModified<=1:
-        testContent=''
-        with open(watchedFile, 'r') as file_content:
-            testContent=content_file.read()
-            emit('check complete')
-            newCellsToRun, allCellsList=updateLedgerPop(file_content, ledger, myDir)
-            for cell in newCellsToRun:
-                emit('showLoading', cell['hash')
+        update()
+        time.sleep(1)
+        emit('check complete')
     else:
         time.sleep(1)
         emit('check complete')
 def main():
+    ledger=[]
     def startFlask():
         socketio.run(app, port=5000, debug=True)
+        webbrowser.open_new_tab(url)
     try:
         flask=Process(target=startFlask)
         flask.start()
@@ -68,4 +64,14 @@ def main():
         print("Terminating flask server.")
         flask.terminate()
         flask.join()
-    webbrowser.open_new_tab(url)
+def update():
+        global ledger
+        testContent=''
+        with open(fileLocation, 'r') as file_content:
+            testContent=file_content.read()
+        newLedger, allCellsList=python_live.util.updateLedgerPop(testContent, ledger, myDir)
+        ledger=newLedger
+        emit('showLoading', allCellsList)
+        output=python_live.util.runNewCells(allCellsList, ledger, ledgerScope, myDir)
+        emit('showOutput', output)
+

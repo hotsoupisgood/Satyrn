@@ -1,28 +1,41 @@
-$(document).ready(function(){
+vm={}
+document.addEventListener("DOMContentLoaded", function(){
+	cells={}
+	vm=new Vue({
+		el: '#app',
+		data: {
+			cells:cells,
+		},
+		delimiters: ['[[',']]']
+	})
 	var socket = io();
-//	var intervalID = int()
 	function myCallback() {
 		socket.emit('checkOnUpdate')
 	 }
 	socket.on('connect', function() {
 		console.log('Connected to server');
 		socket.emit('checkOnUpdate')
-//		intervalID=window.setInterval(myCallback, 1000);
         });
 	socket.on('disconnect', function() {
 		console.log('Disconnected to server');
-//		window.clearInterval(intervalID)
         });
-	socket.on('check complete', function(reload) {
-		if(reload) {
-			setTimeout(function(){
-				location.reload();
-			}, 2000);
-		}else {
-			socket.emit('checkOnUpdate')
-		}
+	socket.on('check complete', function() {
+		socket.emit('checkOnUpdate')
 	});
-	socket.on('reload', function() {
-		location.reload();
+	socket.on('showLoading', function(newCells) {
+		console.log(newCells);
+		vm.cells=newCells
+	});
+	socket.on('showOutput', function(newOutput) {
+		console.log(vm.cells)
+		for (var i in vm.cells){
+			out=newOutput.shift()
+			console.log(out)
+			if(vm.cells[i].stderr=='none'&&vm.cells[i].stdout=='none'){
+				vm.cells[i].stdout=out.stdout
+				vm.cells[i].stderr=out.stderr
+			}
+		}
+			
 	});
 });

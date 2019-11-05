@@ -4,25 +4,17 @@ import datetime
 import glob
 from hashlib import md5
 from io import StringIO
+import re
 from subprocess import Popen, PIPE
-import re, sys, time, os
+import sys
 from flask import url_for
 from pygments import highlight
 from pygments.lexers import BashLexer, PythonLexer
 from pygments.formatters import HtmlFormatter
 from flask_socketio import emit, SocketIO
+import time
+import os
 
-def update(watchedFile, ledger, ledgerScope, myDir):
-    testContent=''
-    with open(watchedFile, 'r') as content_file:
-        testContent=content_file.read()
-    newCellsToRun, ledger=updateLedgerPop(testContent, ledger, myDir)
-    print(ledger)
-    output=runNewCells(newCellsToRun, ledger, ledgerScope, myDir)
-#    print(output)
-    mainHtml, cssHtml, bodyHtml=convertLedgerToHtml(ledger, output, myDir)
-#    print(bodyHtml)
-    return mainHtml, cssHtml, bodyHtml
 def addSavePlot(fileString, myDir):
     fileArrayWithPlot=[]
     plotCount=0
@@ -35,13 +27,18 @@ def addSavePlot(fileString, myDir):
     return fileString 
 def updateLedgerPop(fileString, ledger, myDir):
     allCellsList=[]
+    newLedger=[]
     newCellsToRun=[]
     cellDelimiter='####\n'
     for cell in list(filter(None, fileString.split(cellDelimiter))):
         cellHash=md5(cell.encode()).hexdigest()
-        allCellsList.append({'hash':cellHash, 'code':cell, 'datetime': time.strftime("%x %X", time.gmtime()), 'changed': False})
+        newLedger.append(cellHash)
+        isChanged=False
+        if cellHash not in ledger:
+            isChanged=True
+        allCellsList.append({'hash':cellHash, 'code':cell, 'datetime': time.strftime("%x %X", time.gmtime()), 'changed': isChanged, 'stdout':'none', 'stderr':'none'})
     newCellsToRun=getNewCellsToRun(ledger, allCellsList)
-    return newCellsToRun, allCellsList
+    return newLedger, allCellsList
 def getNewCellsToRun(ledger, allCellsList):
     newCellsToRun=[]
     for currentCell, ledgerCell in zip_longest(allCellsList, ledger, fillvalue=None):
@@ -65,15 +62,18 @@ def runNewCells(newCellsToRun, ledger, ledgerScope, myDir):
     cellOutput=[]
 #    print(ledger)
     for cell in newCellsToRun:
-        cellToRun=addSavePlot(cell['code'], myDir)
-        redirected_output=sys.stdout=StringIO()
-        redirected_error=sys.stderr=StringIO()
-        try:
-            exec(cellToRun, globals(), ledgerScope)
-            cellOutput.append({'stdout':redirected_output.getvalue(), 'stderr': ''})
-        except Exception as e:
-            cellOutput.append({'stdout':'', 'stderr':str(e)})
-        finally:
-            sys.stdout=sys.__stdout__
-            sys.stderr=sys.__stderr__
+        if cell['changed'] is True:
+            cellToRun=addSavePlot(cell['code'], myDir)
+            redirected_output=sys.stdout=StringIO()
+            redirected_error=sys.stderr=StringIO()
+            try:
+                exec(cellToRun, globals(), ledgerScope)
+                cellOutput.append({'stdout':redirected_output.getvalue(), 'stderr': ''})
+            except Exception as e:
+                cellOutput.append({'stdout':'', 'stderr':str(e)})
+            finally:
+                sys.stdout=sys.__stdout__
+                sys.stderr=sys.__stderr__
+        else:
+            cellOutput.append('')
     return cellOutput

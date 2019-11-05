@@ -1,29 +1,30 @@
 <head>
-	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 	<script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" ></script>
 	<link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles.css') }}">
-	<script type="text/javascript" src="{{jsloc}}"></script>
-	<style>
-{{css}}
-	</style>
+	<script type="text/javascript" src="{{ url_for('static', filename='main.js') }}"></script>
+	<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+	<!--	<script type="text/javascript" src="{{ url_for('static', filename='vue.min.js') }}"></script>-->
+	<style> {{css}} </style>
 </head>
 <body>
-	{% for cell in body %}
-	<cell>
+	<div id='app'>
+	<cell v-for="cell in cells" v-bind:key='cell.hash'>
 	<top>
-	{{cell['datetime']}}
+	[[ cell.datetime ]]
 	</top>
 	<maincode>
-	{{cell['code'] | safe }}
+	[[ cell.code ]]
 	</maincode>
 	<termout>
-	{% if cell['stdout']|length>0 %}
-	<stdout>Standard Output:<br>{{cell['stdout'] | safe }}</stdout>
-	{% endif %}
-	{% if cell['stderr']|length>0 %}
-	<stderr>Standard Error:<br>{{cell['stderr'] | safe }}</stderr>
-	{% endif %}
+	<stdout>
+	Standard Output:<br>
+	[[ cell.stdout ]]
+	</stdout>
+	<stderr>
+	Standard Error:<br>
+	[[ cell.stderr ]]
+	</stderr>
 	</termout>
 	</cell>
-	{% endfor %}
+	</div>
 </body>
