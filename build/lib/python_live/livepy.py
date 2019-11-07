@@ -23,7 +23,8 @@ socketio = SocketIO(app)
 
 myFile=args.file
 fileLocation=myFile
-ledgerScope={}
+globalScope={}
+localScope={}
 ledger=[]
 myDir=os.path.dirname(os.path.abspath(__file__))
 @app.route('/')
@@ -72,6 +73,6 @@ def update():
         newLedger, allCellsList=python_live.util.updateLedgerPop(testContent, ledger, myDir)
         ledger=newLedger
         emit('showLoading', allCellsList)
-        output=python_live.util.runNewCells(allCellsList, ledger, ledgerScope, myDir)
+        output=python_live.util.runNewCells(allCellsList, ledger, globalScope, localScope, myDir)
         emit('showOutput', output)
 

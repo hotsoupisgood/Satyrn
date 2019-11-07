@@ -1,14 +1,17 @@
 ####
+import util 
 def hello():
     print('hello world')
 x=4
+#print(globals())
+#print(locals())
 ####
-
+print(ledgerScope)
+#print(globals())
+#print(locals())
 import os
 cwd = os.getcwd()
 print(cwd)
-dir_path = os.path.dirname(os.path.realpath(__file__))
-print(dir_path)
 print(x-9)
 
 ####

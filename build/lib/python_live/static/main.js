@@ -31,9 +31,11 @@ document.addEventListener("DOMContentLoaded", function(){
 		for (var i in vm.cells){
 			out=newOutput.shift()
 			console.log(out)
-			if(vm.cells[i].stderr=='none'&&vm.cells[i].stdout=='none'){
-				vm.cells[i].stdout=out.stdout
+			if(vm.cells[i].stderr=='none'){
 				vm.cells[i].stderr=out.stderr
+			}
+			if(vm.cells[i].stdout=='none'){
+				vm.cells[i].stdout=out.stdout
 			}
 		}
 			

@@ -58,22 +58,45 @@ def convertLedgerToHtml(ledger, std, myDir):
     cssCode=HtmlFormatter().get_style_defs('.highlight')
     mainUrl=url_for('static', filename='main.js')
     return mainUrl, cssCode, htmlBodyArray
-def runNewCells(newCellsToRun, ledger, ledgerScope, myDir):
+def runNewCells(newCellsToRun, ledger, globalScope, localScope, myDir):
     cellOutput=[]
 #    print(ledger)
     for cell in newCellsToRun:
         if cell['changed'] is True:
             cellToRun=addSavePlot(cell['code'], myDir)
-            redirected_output=sys.stdout=StringIO()
-            redirected_error=sys.stderr=StringIO()
-            try:
-                exec(cellToRun, globals(), ledgerScope)
-                cellOutput.append({'stdout':redirected_output.getvalue(), 'stderr': ''})
-            except Exception as e:
-                cellOutput.append({'stdout':'', 'stderr':str(e)})
-            finally:
-                sys.stdout=sys.__stdout__
-                sys.stderr=sys.__stderr__
+            stdout, stderr, globalScope, localScope=runWithCmd(cellToRun, globalScope, localScope)
+#            stdout, stderr=runWithExec(cellToRun, ledgerScope)
+            cellOutput.append({'stdout':stdout, 'stderr':stderr})
         else:
             cellOutput.append('')
     return cellOutput
+def runWithCmd(cellCode, ledgerScope, localScope):
+    setContextLoop='ledgerScope='+str(ledgerScope)+'\nfor scopeVar in ledgerScope.items():\n\tglobals()[scopeVar]=ledgerScope[scopeVar]\n'
+    cellCode=setContextLoop+cellCode
+    printContext='\nprint(globals())\nprint(locals())'
+    process = Popen(['python3','-u', '-c', cellCode], stdout=PIPE, stderr=PIPE)
+    stdout, stderr = process.communicate()
+    stdout=stdout.decode('utf-8')
+    stderr=stderr.decode('utf-8')
+    splitStdout=stdout.split('\n')
+    print(splitStdout)
+    localScope=splitStdout[-1]
+    globalScope=splitStdout[-2]
+    return stdout, stderr, globalScope, localScope
+def runWithExec(cellCode, ledgerScope):
+    redirected_output=sys.stdout=StringIO()
+    redirected_error=sys.stderr=StringIO()
+    stdout=''
+    stderr=''
+    try:
+        exec(cellCode, ledgerScope, ledgerScope)
+        stdout=redirected_output.getvalue()
+        stderr=''
+
+    except Exception as e:
+        stdout=redirected_output.getvalue()
+        stderr=str(e)
+    finally:
+        sys.stdout=sys.__stdout__
+        sys.stderr=sys.__stderr__
+    return stdout, stderr
