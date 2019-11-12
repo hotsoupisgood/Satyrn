@@ -5,6 +5,8 @@ document.addEventListener("DOMContentLoaded", function(){
 		el: '#app',
 		data: {
 			cells:cells,
+			spinnerHtml:'<div class="lds-grid"></div>'
+
 		},
 		delimiters: ['[[',']]']
 	})
@@ -30,12 +32,13 @@ document.addEventListener("DOMContentLoaded", function(){
 		console.log(vm.cells)
 		for (var i in vm.cells){
 			out=newOutput.shift()
-			console.log(out)
 			if(vm.cells[i].stderr=='none'){
 				vm.cells[i].stderr=out.stderr
+				vm.cells[i].changed=false
 			}
 			if(vm.cells[i].stdout=='none'){
 				vm.cells[i].stdout=out.stdout
+				vm.cells[i].changed=false
 			}
 		}
 			

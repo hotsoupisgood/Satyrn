@@ -25,6 +25,7 @@ myFile=args.file
 fileLocation=myFile
 globalScope={}
 localScope={}
+allCellsList={}
 ledger=[]
 myDir=os.path.dirname(os.path.abspath(__file__))
 @app.route('/')
@@ -38,7 +39,7 @@ def home():
 @socketio.on('connect')
 def connect():
     print('Connected to client')
-    update()
+    update(first=True)
 @socketio.on('disconnect')
 def disconnect():
     print('Client disconnected')
@@ -47,6 +48,7 @@ def checkOnUpdate():
     lastModified=os.path.getmtime(fileLocation)
     timeSinceModified=int(time.time()-lastModified)
     if timeSinceModified<=1:
+        time.sleep(1)
         update()
         time.sleep(1)
         emit('check complete')
@@ -65,14 +67,16 @@ def main():
         print("Terminating flask server.")
         flask.terminate()
         flask.join()
-def update():
+def update(first=False):
         global ledger
+        global allCellsList
         testContent=''
         with open(fileLocation, 'r') as file_content:
             testContent=file_content.read()
-        newLedger, allCellsList=python_live.util.updateLedgerPop(testContent, ledger, myDir)
+        newLedger, allCellsList=python_live.util.updateLedgerPop(allCellsList, testContent, ledger, myDir)
+        htmlAllCells=python_live.util.convertLedgerToHtml(allCellsList, myDir)
         ledger=newLedger
-        emit('showLoading', allCellsList)
-        output=python_live.util.runNewCells(allCellsList, ledger, globalScope, localScope, myDir)
+        emit('showLoading', htmlAllCells)
+        output=python_live.util.runNewCells(allCellsList, ledger, globalScope, localScope, myDir, first)
         emit('showOutput', output)
 
