@@ -32,11 +32,12 @@ document.addEventListener("DOMContentLoaded", function(){
 		console.log(vm.cells)
 		for (var i in vm.cells){
 			out=newOutput.shift()
-			if(vm.cells[i].stderr=='none'){
+			vm.cells[i]['image']='<img src="data:image/png;base64, '+out['image/png']+'" />'
+			if(vm.cells[i].stderr=='None'){
 				vm.cells[i].stderr=out.stderr
 				vm.cells[i].changed=false
 			}
-			if(vm.cells[i].stdout=='none'){
+			if(vm.cells[i].stdout=='None'){
 				vm.cells[i].stdout=out.stdout
 				vm.cells[i].changed=false
 			}

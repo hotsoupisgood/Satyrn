@@ -8,10 +8,10 @@ from pygments import highlight
 from pygments.lexers import BashLexer, PythonLexer
 from pygments.formatters import HtmlFormatter
 from flask_socketio import emit, SocketIO
+import python_live.core.constants as Constant
 
-def addSavePlot(fileString, myDir):
+def addSavePlot(fileString, myDir, plotCount):
     fileArrayWithPlot=[]
-    plotCount=0
     savefigText="plt.savefig('"+myDir+"/static/plot"+str(plotCount)+".png')"
     match = re.compile(r"###p")
     items = re.findall(match, fileString)
@@ -19,26 +19,48 @@ def addSavePlot(fileString, myDir):
         savefigText="plt.savefig('"+myDir+"/static/plot"+str(plotCount)+".png')"
         fileString=fileString.replace(item, savefigText)
     return fileString 
+def getPlotData(globalScope, localScope):
+    code="from binascii import b2a_base64\nimport io\nbuf = io.BytesIO()\nplt.savefig(buf, format = 'png')\nbuf.seek(0)\nprint(b2a_base64(buf.getvalue()).decode())"
+#    code=""
+    redirected_output=sys.stdout=StringIO()
+    redirected_error=sys.stderr=StringIO()
+    stdout=''
+    stderr=''
+    try:
+        sys.path.append(os.getcwd())
+        exec(code, globalScope, localScope)
+        stdout=redirected_output.getvalue()
+        stderr=''
+    except Exception as e:
+        stdout=redirected_output.getvalue()
+        stderr=str(e)
+    finally:
+        sys.path.pop()
+        sys.stdout=sys.__stdout__
+        sys.stderr=sys.__stderr__
+    if stdout==Constant.EmptyGraph:
+        stdout='None'
+    return stdout
 def updateLedgerPop(oldAllCells, fileString, ledger, myDir):
     allCellsList=[]
     newLedger=[]
     newCellsToRun=[]
     cellDelimiter='####\n'
-    for cell in list(filter(None, fileString.split(cellDelimiter))):
+    for cellCount, cell in enumerate(list(filter(None, fileString.split(cellDelimiter)))):
         cellHash=md5(cell.encode()).hexdigest()
         newLedger.append(cellHash)
         isChanged=False
-        stdout='none'
-        stderr='none'
+        stdout='None'
+        stderr='None'
         if cellHash not in ledger:
             isChanged=True
         for oldCell in oldAllCells:
-            print(oldCell['stdout'])
-            print(oldCell['hash'])
+#            print(oldCell['stdout'])
+#            print(oldCell['hash'])
             if oldCell['hash']==cellHash:
                 stdout=oldCell['stdout']
                 stdtr=oldCell['stderr']
-        allCellsList.append({'hash':cellHash, 'code':cell, 'plot':'None', 'datetime': time.strftime("%x %X", time.gmtime()), 'changed': isChanged, 'stdout':stdout, 'stderr':stderr})
+        allCellsList.append({'cellCount':str(cellCount), 'hash':cellHash, 'code':cell, 'plot':'None', 'datetime': time.strftime("%x %X", time.gmtime()), 'changed': isChanged, 'stdout':stdout, 'stderr':stderr, 'image/png':'None'})
     newCellsToRun=getNewCellsToRun(ledger, allCellsList)
     return newLedger, allCellsList
 def getNewCellsToRun(ledger, allCellsList):
@@ -57,19 +79,19 @@ def convertLedgerToHtml(allCellsList, myDir):
     for cell in tempCells:
         cell['code']=highlight(cell['code'], PythonLexer(), HtmlFormatter())
         if allPlots:
-            cell['plot']='<img src="'+url_for('static', filename=os.path.basename(allPlots.pop(0)))+'">'
+            cell['plot']='<img src="'+url_for('static', filename=os.path.basename('plot'+cell['cellCount']))+'">'
         else:
             cell['plot']=''
     plotCount=len(allPlots)
     return tempCells 
 def runNewCells(newCellsToRun, ledger, globalScope, localScope, myDir, first=False):
     cellOutput=[]
-    for cell in newCellsToRun or first==True:
-        if cell['changed'] is True:
-            cellToRun=addSavePlot(cell['code'], myDir)
+    for cellCount, cell in enumerate(newCellsToRun):
+        if cell['changed']==True or first==True:
+            cellToRun=addSavePlot(cell['code'], myDir, cellCount)
 #            stdout, stderr, globalScope, localScope=runWithCmd(cellToRun, globalScope, localScope)
-            stdout, stderr=runWithExec(cellToRun, globalScope, localScope)
-            cellOutput.append({'stdout':stdout, 'stderr':stderr})
+            stdout, stderr, plotData=runWithExec(cellToRun, globalScope, localScope)
+            cellOutput.append({'stdout':highlight(stdout, BashLexer(), HtmlFormatter()), 'stderr':highlight(stderr, BashLexer(), HtmlFormatter()), 'image/png':plotData})
             for newCell in newCellsToRun:
                 if newCell['hash']==cell['hash']:
                     newCell['stdout']=stdout
@@ -86,7 +108,7 @@ def runWithCmd(cellCode, ledgerScope, localScope):
     stdout=stdout.decode('utf-8')
     stderr=stderr.decode('utf-8')
     splitStdout=stdout.split('\n')
-    print(splitStdout)
+    #print(splitStdout)
     localScope=splitStdout[-1]
     globalScope=splitStdout[-2]
     return stdout, stderr, globalScope, localScope
@@ -98,7 +120,6 @@ def runWithExec(cellCode, globalScope, localScope):
     try:
         sys.path.append(os.getcwd())
         exec(cellCode, globalScope, localScope)
-#        exec(cellCode, globals(), locals())
         stdout=redirected_output.getvalue()
         stderr=''
     except Exception as e:
@@ -108,4 +129,18 @@ def runWithExec(cellCode, globalScope, localScope):
         sys.path.pop()
         sys.stdout=sys.__stdout__
         sys.stderr=sys.__stderr__
-    return stdout, stderr
+    plotData=getPlotData(globalScope, localScope)
+    return stdout, stderr, plotData
+#Here's the answers from some stack answers:
+#buf = io.BytesIO()
+#plt.savefig(buf, format = 'png')
+#buf.seek(0)
+#Another1:
+#import matplotlib.pyplot as plt
+#
+#fig, ax = plt.subplots(1, figsize=(4, 4), dpi=300)
+#ax.plot([1, 3, 5, 8, 4, 2])
+#
+#fig.canvas.draw()
+#temp_canvas = fig.canvas
+#plt.close()
