@@ -18,17 +18,17 @@
 	<bottom>
 	<div v-if='cell.changed' v-html='spinnerHtml'></div>
 	<termout v-else>
-	<stdout>
+	<stdout v-if='cell.stdout'>
 	Standard Output:<br>
 	<div v-html='cell.stdout'></div>
 	</stdout>
-	<stderr>
+	<stderr v-if='cell.stderr'>
 	Standard Error:<br>
 	<div v-html='cell.stderr'></div>
 	</stderr>
 	</termout>
 	<plot>
-	<div v-html='cell.plot'></div>
+	<div v-html='cell["image/png"]'></div>
 	</plot>
 	</bottom>
 	</cell>

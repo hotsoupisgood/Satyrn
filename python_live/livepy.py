@@ -21,6 +21,7 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
 
+executionIterator=0
 myFile=args.file
 fileLocation=myFile
 globalScope={}
@@ -39,7 +40,10 @@ def home():
 @socketio.on('connect')
 def connect():
     print('Connected to client')
-    update(first=True)
+    if executionIterator==0:
+        update()
+    else:
+        display()
 @socketio.on('disconnect')
 def disconnect():
     print('Client disconnected')
@@ -67,16 +71,23 @@ def main():
         print("Terminating flask server.")
         flask.terminate()
         flask.join()
-def update(first=False):
-        global ledger
-        global allCellsList
-        testContent=''
-        with open(fileLocation, 'r') as file_content:
-            testContent=file_content.read()
-        newLedger, allCellsList=python_live.util.updateLedgerPop(allCellsList, testContent, ledger, myDir)
-        htmlAllCells=python_live.util.convertLedgerToHtml(allCellsList, myDir)
-        ledger=newLedger
-        emit('showLoading', htmlAllCells)
-        output=python_live.util.runNewCells(allCellsList, ledger, globalScope, localScope, myDir, first)
-        emit('showOutput', output)
-
+def display():
+    global allCellsList
+    print(allCellsList)
+    emit('showAll', python_live.util.convertLedgerToHtml(allCellsList))
+def update():
+    global ledger
+    global allCellsList
+    global executionIterator
+    testContent=''
+    with open(fileLocation, 'r') as file_content:
+        testContent=file_content.read()
+    newLedger, allCellsList=python_live.util.updateLedgerPop(allCellsList, testContent, ledger, myDir)
+    htmlAllCells=python_live.util.convertLedgerToHtml(allCellsList)
+    ledger=newLedger
+    emit('showLoading', htmlAllCells)
+    output=python_live.util.runNewCells(allCellsList, ledger, globalScope, localScope, myDir)
+    output=python_live.util.convertLedgerToHtml(output, part='output')
+    emit('showOutput', output)
+    python_live.util.updateChanged(allCellsList)
+    executionIterator += 1

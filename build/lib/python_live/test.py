@@ -7,6 +7,10 @@ ttest.hello()
 x=4
 #print(globals())
 #print(locals())
+import matplotlib.pyplot as plt
+plt.plot(range(20),range(20))
+###p
+
 ####
 #print(globals())
 #print(locals())

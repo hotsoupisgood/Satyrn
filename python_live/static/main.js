@@ -25,23 +25,18 @@ document.addEventListener("DOMContentLoaded", function(){
 		socket.emit('checkOnUpdate')
 	});
 	socket.on('showLoading', function(newCells) {
-		console.log(newCells);
 		vm.cells=newCells
 	});
 	socket.on('showOutput', function(newOutput) {
-		console.log(vm.cells)
 		for (var i in vm.cells){
 			out=newOutput.shift()
-			vm.cells[i]['image']='<img src="data:image/png;base64, '+out['image/png']+'" />'
-			if(vm.cells[i].stderr=='None'){
-				vm.cells[i].stderr=out.stderr
-				vm.cells[i].changed=false
-			}
-			if(vm.cells[i].stdout=='None'){
-				vm.cells[i].stdout=out.stdout
-				vm.cells[i].changed=false
-			}
+			vm.cells[i].changed=false
+			vm.cells[i].stderr=out.stderr
+			vm.cells[i].stdout=out.stdout
+			vm.cells[i]['image/png']=out['image/png']
 		}
-			
+	});
+	socket.on('showAll', function(cellList) {
+		vm.cells=cellList
 	});
 });

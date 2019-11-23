@@ -20,8 +20,7 @@ def addSavePlot(fileString, myDir, plotCount):
         fileString=fileString.replace(item, savefigText)
     return fileString 
 def getPlotData(globalScope, localScope):
-    code="from binascii import b2a_base64\nimport io\nbuf = io.BytesIO()\nplt.savefig(buf, format = 'png')\nbuf.seek(0)\nprint(b2a_base64(buf.getvalue()).decode())"
-#    code=""
+    code=Constant.GetPlot
     redirected_output=sys.stdout=StringIO()
     redirected_error=sys.stderr=StringIO()
     stdout=''
@@ -39,8 +38,11 @@ def getPlotData(globalScope, localScope):
         sys.stdout=sys.__stdout__
         sys.stderr=sys.__stderr__
     if stdout==Constant.EmptyGraph:
-        stdout='None'
+        stdout=''
     return stdout
+def updateChanged(cellsList):
+    for cell in cellsList:
+        cell['changed']=False
 def updateLedgerPop(oldAllCells, fileString, ledger, myDir):
     allCellsList=[]
     newLedger=[]
@@ -50,8 +52,8 @@ def updateLedgerPop(oldAllCells, fileString, ledger, myDir):
         cellHash=md5(cell.encode()).hexdigest()
         newLedger.append(cellHash)
         isChanged=False
-        stdout='None'
-        stderr='None'
+        stdout=''
+        stderr=''
         if cellHash not in ledger:
             isChanged=True
         for oldCell in oldAllCells:
@@ -60,7 +62,7 @@ def updateLedgerPop(oldAllCells, fileString, ledger, myDir):
             if oldCell['hash']==cellHash:
                 stdout=oldCell['stdout']
                 stdtr=oldCell['stderr']
-        allCellsList.append({'cellCount':str(cellCount), 'hash':cellHash, 'code':cell, 'plot':'None', 'datetime': time.strftime("%x %X", time.gmtime()), 'changed': isChanged, 'stdout':stdout, 'stderr':stderr, 'image/png':'None'})
+        allCellsList.append({'cellCount':str(cellCount), 'hash':cellHash, 'code':cell, 'plot':'', 'datetime': time.strftime("%x %X", time.gmtime()), 'changed': isChanged, 'stdout':stdout, 'stderr':stderr, 'image/png':''})
     newCellsToRun=getNewCellsToRun(ledger, allCellsList)
     return newLedger, allCellsList
 def getNewCellsToRun(ledger, allCellsList):
@@ -70,48 +72,40 @@ def getNewCellsToRun(ledger, allCellsList):
             currentCell['changed']=True
         newCellsToRun.append(currentCell)
     return newCellsToRun
-def convertLedgerToHtml(allCellsList, myDir):
-    # Return a deep copy of allCellsList with code replaced with html-ized code
-    tempCells=copy.deepcopy(allCellsList)
-    allPlots=glob.glob(myDir+'/static/plot[0-9].png')
-    allPlots.sort(key=os.path.getmtime)
-    allPlots.reverse()
+def convertLedgerToHtml(cellList, part='all'):
+    # Return a deep copy of cellList with code replaced with html-ized code
+    tempCells=copy.deepcopy(cellList)
     for cell in tempCells:
-        cell['code']=highlight(cell['code'], PythonLexer(), HtmlFormatter())
-        if allPlots:
-            cell['plot']='<img src="'+url_for('static', filename=os.path.basename('plot'+cell['cellCount']))+'">'
-        else:
-            cell['plot']=''
-    plotCount=len(allPlots)
+        if part=='all':
+            cell['code']=highlight(cell['code'], PythonLexer(), HtmlFormatter())
+            if cell['image/png']:
+                cell['image/png']='<img src="data:image/png;base64, '+cell['image/png']+'" />'
+            if cell['stdout']:
+                cell['stdout']=highlight(cell['stdout'], BashLexer(), HtmlFormatter())
+            if cell['stderr']:
+                cell['stderr']=highlight(cell['stderr'], BashLexer(), HtmlFormatter())
+        if part=='output':
+            if cell['image/png']:
+                cell['image/png']='<img src="data:image/png;base64, '+cell['image/png']+'" />'
+            if cell['stdout']:
+                cell['stdout']=highlight(cell['stdout'], BashLexer(), HtmlFormatter())
+            if cell['stderr']:
+                cell['stderr']=highlight(cell['stderr'], BashLexer(), HtmlFormatter())
+
     return tempCells 
-def runNewCells(newCellsToRun, ledger, globalScope, localScope, myDir, first=False):
+def runNewCells(cellsToRun, ledger, globalScope, localScope, myDir):
     cellOutput=[]
-    for cellCount, cell in enumerate(newCellsToRun):
-        if cell['changed']==True or first==True:
-            cellToRun=addSavePlot(cell['code'], myDir, cellCount)
-#            stdout, stderr, globalScope, localScope=runWithCmd(cellToRun, globalScope, localScope)
-            stdout, stderr, plotData=runWithExec(cellToRun, globalScope, localScope)
-            cellOutput.append({'stdout':highlight(stdout, BashLexer(), HtmlFormatter()), 'stderr':highlight(stderr, BashLexer(), HtmlFormatter()), 'image/png':plotData})
-            for newCell in newCellsToRun:
-                if newCell['hash']==cell['hash']:
-                    newCell['stdout']=stdout
-                    newCell['stderr']=stderr
+    for cellCount, cell in enumerate(cellsToRun):
+        if cell['changed']==True:
+            stdout, stderr, plotData=runWithExec(cell['code'], globalScope, localScope)
+            # Keep the master list updated
+            cellsToRun[cellCount]['stdout']=stdout
+            cellsToRun[cellCount]['stderr']=stderr
+            cellsToRun[cellCount]['image/png']=plotData
+            cellOutput.append({'stdout':stdout, 'stderr':stderr, 'image/png':plotData})
         else:
             cellOutput.append('')
     return cellOutput
-def runWithCmd(cellCode, ledgerScope, localScope):
-    setContextLoop='ledgerScope='+str(ledgerScope)+'\nfor scopeVar in ledgerScope.items():\n\tglobals()[scopeVar]=ledgerScope[scopeVar]\n'
-    cellCode=setContextLoop+cellCode
-    printContext='\nprint(globals())\nprint(locals())'
-    process = Popen(['python3','-u', '-c', cellCode], stdout=PIPE, stderr=PIPE)
-    stdout, stderr = process.communicate()
-    stdout=stdout.decode('utf-8')
-    stderr=stderr.decode('utf-8')
-    splitStdout=stdout.split('\n')
-    #print(splitStdout)
-    localScope=splitStdout[-1]
-    globalScope=splitStdout[-2]
-    return stdout, stderr, globalScope, localScope
 def runWithExec(cellCode, globalScope, localScope):
     redirected_output=sys.stdout=StringIO()
     redirected_error=sys.stderr=StringIO()
@@ -131,16 +125,3 @@ def runWithExec(cellCode, globalScope, localScope):
         sys.stderr=sys.__stderr__
     plotData=getPlotData(globalScope, localScope)
     return stdout, stderr, plotData
-#Here's the answers from some stack answers:
-#buf = io.BytesIO()
-#plt.savefig(buf, format = 'png')
-#buf.seek(0)
-#Another1:
-#import matplotlib.pyplot as plt
-#
-#fig, ax = plt.subplots(1, figsize=(4, 4), dpi=300)
-#ax.plot([1, 3, 5, 8, 4, 2])
-#
-#fig.canvas.draw()
-#temp_canvas = fig.canvas
-#plt.close()
