@@ -1,4 +1,5 @@
 from itertools import zip_longest
+import copy
 import time, sys, datetime, glob, re, sys, time, os, copy
 from hashlib import md5
 from io import StringIO
@@ -10,6 +11,8 @@ from pygments.formatters import HtmlFormatter
 from flask_socketio import emit, SocketIO
 import satyrn.core.constants as Constant
 
+gs={}
+ls={}
 def getPlotData(globalScope, localScope):
     code=Constant.GetPlot
     redirected_output=sys.stdout=StringIO()
@@ -32,10 +35,12 @@ def getPlotData(globalScope, localScope):
     return stdout
 def runNewCells(cellsToRun, ledger, globalScope, localScope, myDir):
     cellOutput=[]
+    cgs=copy.deepcopy(gs)
     for cellCount, cell in enumerate(cellsToRun):
-        if cell['changed']==True:
-            stdout, stderr, plotData=runWithExec(cell['code'], globalScope, localScope)
-        else:
+        stdout, stderr, plotData=runWithExec(cell['code'], globalScope, localScope)
+#        print('equil %s' % eq)
+#        cgs=copy.deepcopy(gs)
+        if not cell['changed']==True:
             stdout=cellsToRun[cellCount]['stdout']
             stderr=cellsToRun[cellCount]['stderr']
             plotData=cellsToRun[cellCount]['image/png']
@@ -46,6 +51,7 @@ def runNewCells(cellsToRun, ledger, globalScope, localScope, myDir):
         cellOutput.append({'stdout':stdout, 'stderr':stderr, 'image/png':plotData})
     return cellOutput
 def runWithExec(cellCode, globalScope, localScope):
+    #runs one cell of code and return plotdata and std out/err
     redirected_output=sys.stdout=StringIO()
     redirected_error=sys.stderr=StringIO()
     stdout=''

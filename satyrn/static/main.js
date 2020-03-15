@@ -16,18 +16,17 @@ document.addEventListener("DOMContentLoaded", function(){
 	 }
 	socket.on('connect', function() {
 		console.log('Connected to server');
-//		socket.emit('checkOnUpdate')
         });
 	socket.on('disconnect', function() {
 		console.log('Disconnected to server');
         });
-	socket.on('check complete', function() {
-//		socket.emit('checkOnUpdate')
+	socket.on('ping client', function() {
+		socket.emit('check if saved')
 	});
-	socket.on('showLoading', function(newCells) {
+	socket.on('show loading', function(newCells) {
 		vm.cells=newCells
 	});
-	socket.on('showOutput', function(newOutput) {
+	socket.on('show output', function(newOutput) {
 		for (var i in vm.cells){
 			out=newOutput.shift()
 			vm.cells[i].changed=false
@@ -36,8 +35,7 @@ document.addEventListener("DOMContentLoaded", function(){
 			vm.cells[i]['image/png']=out['image/png']
 		}
 	});
-	socket.on('showAll', function(cellList) {
-		console.log('hello world')
+	socket.on('show all', function(cellList) {
 		vm.cells=cellList
 	});
 });

@@ -20,6 +20,7 @@ def updateLedgerPop(oldAllCells, fileString, ledger, myDir):
     cellDelimiter='####\n'
     for cellCount, cell in enumerate(list(filter(None, fileString.split(cellDelimiter)))):
         cellHash=md5(cell.encode()).hexdigest()
+        #Append to newLedger so that those cells won't run next time
         newLedger.append(cellHash)
         isChanged=False
         stdout=''
@@ -27,18 +28,19 @@ def updateLedgerPop(oldAllCells, fileString, ledger, myDir):
         if cellHash not in ledger:
             isChanged=True
         for oldCell in oldAllCells:
-#            print(oldCell['stdout'])
-#            print(oldCell['hash'])
             if oldCell['hash']==cellHash:
                 stdout=oldCell['stdout']
                 stdtr=oldCell['stderr']
         allCellsList.append({'cellCount':str(cellCount), 'hash':cellHash, 'code':cell, 'plot':'', 'datetime': time.strftime("%x %X", time.gmtime()), 'changed': isChanged, 'stdout':stdout, 'stderr':stderr, 'image/png':''})
     newCellsToRun=getNewCellsToRun(ledger, allCellsList)
     return newLedger, allCellsList
+
 def getNewCellsToRun(ledger, allCellsList):
     newCellsToRun=[]
     for currentCell, ledgerCell in zip_longest(allCellsList, ledger, fillvalue=None):
         if currentCell['hash']!=ledgerCell:
             currentCell['changed']=True
+#            print(oldCell['stdout'])
+#            print(oldCell['hash'])
         newCellsToRun.append(currentCell)
     return newCellsToRun
