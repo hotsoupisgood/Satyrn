@@ -11,18 +11,16 @@ from pygments.formatters import HtmlFormatter
 from flask_socketio import emit, SocketIO
 import satyrn.core.constants as Constant
 
-gs={}
-ls={}
 def getPlotData(globalScope, localScope):
     code=Constant.GetPlot
     redirected_output=sys.stdout=StringIO()
     redirected_error=sys.stderr=StringIO()
     stdout=''
     stderr=''
+    sys.path.append(os.getcwd())
     try:
-        sys.path.append(os.getcwd())
         exec(code, globalScope, localScope)
-        stdout=redirected_output.getvalue()
+        stdout=redirected_output.getvalue().rstrip()
         stderr=''
     except Exception as e:
         stdout=redirected_output.getvalue()
@@ -33,22 +31,43 @@ def getPlotData(globalScope, localScope):
     if stdout==Constant.EmptyGraph:
         stdout=''
     return stdout
-def runNewCells(cellsToRun, ledger, globalScope, localScope, myDir):
+def cells(cells, globalScope, localScope):
     cellOutput=[]
-    cgs=copy.deepcopy(gs)
-    for cellCount, cell in enumerate(cellsToRun):
-        stdout, stderr, plotData=runWithExec(cell['code'], globalScope, localScope)
-#        print('equil %s' % eq)
-#        cgs=copy.deepcopy(gs)
-        if not cell['changed']==True:
-            stdout=cellsToRun[cellCount]['stdout']
-            stderr=cellsToRun[cellCount]['stderr']
-            plotData=cellsToRun[cellCount]['image/png']
-        # Keep the master list updated
-        cellsToRun[cellCount]['stdout']=stdout
-        cellsToRun[cellCount]['stderr']=stderr
-        cellsToRun[cellCount]['image/png']=plotData
+    for cellLoc, changed in enumerate(cells):
+        stdout=''
+        stderr=''
+        plotData=''
+        #If a cell has not changed keep the current output
+        if changed:
+            stdout, stderr, plotData=runWithExec(cell['code'][cellLoc], globalScope, localScope)
+            changed=False
+            cells['stdout'][cellLoc]=stdout
+            cells['stderr'][cellLoc]=stderr
+            cells['image/png'][cellLoc]=plotData
+        #Keep the master list updated
+        else:
+            stdout=cells['stdout'][cellLoc]
+            stderr=cells['stderr'][cellLoc]
+            plotData=cells['image/png'][cellLoc]
         cellOutput.append({'stdout':stdout, 'stderr':stderr, 'image/png':plotData})
+    return cellOutput
+def runNewCells(cellsToRun, globalScope, localScope):
+    cellOutput=[]
+    plots=[]
+    for cellCount, cell in enumerate(cellsToRun):
+        #Keep the master list updated
+        if cell['changed']:
+            stdout, stderr, plotData=runWithExec(cell['code'], globalScope, localScope)
+            cell['stdout']=stdout
+            cell['stderr']=stderr
+            cell['image/png']=plotData
+        #If a cell has not changed keep the current output
+        else:
+            stdout=cell['stdout']
+            stderr=cell['stderr']
+            plotData=cell['image/png']
+        cellOutput.append({'stdout':stdout, 'stderr':stderr, 'image/png':plotData})
+    print('Before run:\t%s'%[cell['stdout'] for cell in cellsToRun])
     return cellOutput
 def runWithExec(cellCode, globalScope, localScope):
     #runs one cell of code and return plotdata and std out/err

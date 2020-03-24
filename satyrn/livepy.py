@@ -51,6 +51,8 @@ Connect and disconnect events.
 @socketio.on('connect')
 def connect():
     print('Connected to client')
+    #Show
+    Update.checkUpdate(socketio, fileLocation, connected=True)
     #Start pinging
     socketio.emit('ping client')
 @socketio.on('disconnect')

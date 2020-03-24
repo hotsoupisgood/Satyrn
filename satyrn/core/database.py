@@ -1,4 +1,5 @@
 import sqlite3
+import satyrn.core.constants as Constant
 from datetime import datetime
 import dill
 import os
@@ -6,7 +7,7 @@ import os
 def dict_factory(cursor, row):
     d = {}
     for idx, col in enumerate(cursor.description):
-        if col[0] == 'cells' or col[0] == 'ledger' or col[0] == 'local_scope' or col[0] == 'global_scope':
+        if col[0] == 'cells' or col[0] == 'local_scope' or col[0] == 'global_scope':
             d[col[0]] = dill.loads(row[idx])
         else:
             d[col[0]] = row[idx]
@@ -21,7 +22,7 @@ def getLedger(target):
     fetched=c.fetchone()
     if bool(fetched):
         r=fetched
-        return r['ledger'], r['cells'], r['global_scope'], r['local_scope']
+        return r['cells'], r['global_scope'], r['local_scope']
     else:
         print('Creating ledger...')
         createLedger(target)
@@ -32,8 +33,10 @@ def getExecutions(target):
     return c.fetchone()['executions']
 
 def createLedger(target):
+    print('Creating ledger %s' % target)
     now=datetime.now().strftime('%a, %B, %d, %y')
-    c.execute('INSERT INTO ledger (name, last_edit, created, cells, ledger, global_scope, local_scope) VALUES (?,?,?,?,?,?,?)', (target, now, now, dill.dumps([]), dill.dumps([]), dill.dumps({}), dill.dumps({})))
+    c.execute('INSERT INTO ledger (name, last_edit, created, cells, global_scope, local_scope) VALUES (?,?,?,?,?,?)', (target, now, now, dill.dumps([]), dill.dumps({}), dill.dumps({})))
+#    c.execute('INSERT INTO ledger (name, last_edit, created, cells, ledger, global_scope, local_scope) VALUES (?,?,?,?,?,?,?)', (target, now, now, dill.dumps([]), dill.dumps([]), dill.dumps({}), dill.dumps({})))
 
-def updateLedger(target, ledger, cells, globalScope, localScope, executions):
-    c.execute('UPDATE ledger SET ledger=?, cells=?, global_scope=?, local_scope=?, executions=? WHERE name=?', (dill.dumps(ledger), dill.dumps(cells), dill.dumps(globalScope), dill.dumps(localScope), executions, target))
+def update(target, cells, globalScope, localScope, executions):
+    c.execute('UPDATE ledger SET cells=?, global_scope=?, local_scope=?, executions=? WHERE name=?', (dill.dumps(cells), dill.dumps(globalScope), dill.dumps(localScope), executions, target))
