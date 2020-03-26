@@ -5,25 +5,31 @@ def readme():
                     return f.read()
 
 setup(
-        name='python_live',
-        version='0.1',
+        name='thebe',
+        version='0.0.3.4',
         description='Automatically runs and displays python code in browser.',
-        long_description=readme(),
+        author_email='hairyhenry@gmail.com',
+        url='https://github.com/hotsoupisgood/Satyrn',
 #        include_package_data=True,
         package_data={
-                'python_live': [ '../README.rst', 'templates/*','static/*','util.py']
+                'thebe': [ 'templates/*','static/*','core/*']
                 },
         packages=find_packages(),
-#        ['python_live', 'python_live/util', 'python_live/static', 'python_live/templates'],
         install_requires=[
             'flask',
             'flask_socketio',
-            'pygments'
+            'pygments',
+            'dill'
             ],
-        zip_safe=False,
         entry_points={
             'console_scripts': [
-                'livepy = python_live.livepy:main',
+                'thebe = thebe.thebe:main',
                 ]
-            }
+            },
+        classifiers=[
+            "Programming Language :: Python :: 3",
+            "License :: OSI Approved :: MIT License",
+            "Operating System :: OS Independent",
+        ],
+        python_requires='>=3.7',
         )
