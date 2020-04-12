@@ -5,32 +5,41 @@ import thebe.core.ledger as Ledger
 import os
 import time
 
-#Combines isModified and update functions. 
 def checkUpdate(socketio, fileLocation, connected=False):
+    '''
+    Combines isModified and update functions. 
+    '''
+
     #Get file target information from database if it exists
     Cells, GlobalScope, LocalScope  = Database.getLedger(fileLocation)
-    #If it's modified or if it's the first time it has run, run update
+
+    #If it's modified or if it's the first time it has run, update.
     if isModified(fileLocation) or not GlobalScope:
         time.sleep(1)
         update(socketio, fileLocation, GlobalScope, LocalScope, Cells)
         time.sleep(1)
+
     elif connected==True:
         html=Html.convertLedgerToHtml(Cells)
         socketio.emit('show all', html)
+
     else:
         time.sleep(1)
 
-#Return true if the target file has been modified in the past x amount of time
 def isModified(fileLocation, x=1):
+    '''
+    Return true if the target file has been modified in the past x amount of time
+    '''
+
     lastModified=os.path.getmtime(fileLocation)
     timeSinceModified=int(time.time()-lastModified)
+
     if timeSinceModified<=x:
         return True
     else:
         return False
 
 #Run code and send code and outputs to client
-#def update(socketio, fileLocation, GlobalScope, LocalScope, HashList, Cells):
 def update(socketio, fileLocation, GlobalScope, LocalScope, Cells):
     #print('gspre %s' % GlobalScope)
     '''
@@ -53,13 +62,6 @@ def update(socketio, fileLocation, GlobalScope, LocalScope, Cells):
     Cells=Ledger.update(Cells, fileContent)
 
     '''
-    Take the cells that need to execute, and
-    convert their text to html.
-    '''
-#    htmlAllCells=Html.convertLedgerToHtml(Cells)
-    #htmlAllCells=Html.convertCells(Cells)
-
-    '''
     Send a list of the cells that will run to the
     client so it can show what is loading.
     '''
@@ -72,16 +74,19 @@ def update(socketio, fileLocation, GlobalScope, LocalScope, Cells):
 #    print('After run:\t%s'%[cell['stdout'] for cell in Cells])
     #output=Run.cells(Cells, GlobalScope, LocalScope)
 
-    #Convert output to html  
-    #output=Html.output(output)
-    #Send output to client
+    '''
+    Send output to client
+    '''
     #print('\nOutput list:\n %s' % output)
     #socketio.emit('show output', output)
 #    Ledger.updateChanged(Cells)
     executions += 1
     print('The number of code executions is %d' % executions)
-#    cellList=Ledger.dictToList(Cells)    
-    html=Html.convertLedgerToHtml(Cells)
-    socketio.emit('show all', html)
+#    html=Html.convertLedgerToHtml(Cells)
+    socketio.emit('show all', Cells)
+
+    '''
+    Update the database with the fresh code.
+    '''
     Database.update(fileLocation, Cells, GlobalScope, LocalScope, executions)
 

@@ -1,4 +1,9 @@
 <head>
+	<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/default.min.css">
+	<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+	<!-- <link rel="stylesheet" href="{{ url_for('static', filename='highlight/styles/default.css') }}"> -->
+	<!-- <script src="{{ url_for('static', filename='highlight/highlight.pack.js') }}"></script> -->
+	<script>hljs.initHighlightingOnLoad();</script>
 	<script type="text/javascript" src="{{ url_for('static', filename='socket.io.slim.js') }}"></script>
 	<link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles.css') }}">
 	<script type="text/javascript" src="{{ url_for('static', filename='main.js') }}"></script>
@@ -7,29 +12,43 @@
 	<style> {{css}} </style>
 </head>
 <body>
-	<div id='app'>
-	<div class='cell' v-for="cell in cells" v-bind:key='cell.hash' id='cell.hash'>
-	<div class='top'>
-	[[ cell.time ]]
-	</div>
-	<div class='maincode'>
-	<div v-html='cell.code'></div>
-	</div>
-	<div class='bottom'>
-	<div class='termout'>
-	<div class='stdout' v-if='cell.stdout'>
-	Standard Output:<br>
-	<div v-html='cell.stdout'></div>
-	</div>
-	<div class='stderr' v-if='cell.stderr'>
-	Standard Error:<br>
-	<div v-html='cell.stderr'></div>
-	</div>
-	</div>
-	<div class='plot'>
-	<div v-html='cell["image/png"]'></div>
-	</div>
-	</div>
-	</div>
+	<div id="app">
+		<div class="cell" v-for="cell in cells">
+			<div class="top">
+				[[ cell.last_changed ]]
+			</div>
+			<div class="maincode">
+				<div v-for="source in cell.source">
+					<pre><code class="language-python">
+						[[ source ]]
+					</code></pre>
+				</div>
+			</div>
+			<div class="bottom">
+				<div class="termout">
+					<div class="outputs" v-for="output in cell.outputs">
+						<div class="stdout" v-if="cell.output_type === 'execute_result'">
+							Standard Output:<br>
+							<div class="output" v-for="data in output['data']['text/plain']">
+								<pre><code class="language-bash">
+									<div v-html="data"></div>
+								</code></pre>
+							</div>
+						</div>
+						<div class="stderr" v-if="cell.output_type === 'error'">
+							Standard Error:<br>
+							<div class="output" v-for="data in output['traceback']">
+								<pre><code class="language-bash">
+									<div v-html="data"></div>
+								</code></pre>
+							</div>
+						</div>
+						<div v-if="cell.output_type === 'display_data'">
+							<img v-bind:src="'data:image/png;base64, ' + cell['data']['image/png']" />
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
 	</div>
 </body>

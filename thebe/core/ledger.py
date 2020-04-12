@@ -11,70 +11,66 @@ from flask_socketio import emit, SocketIO
 import thebe.core.constants as Constants
 import copy
 
-#def updateCells(oldCellDict, fileContent):
 def update(oldCellList, fileContent):
+    '''
+    '''
+
     cellList=[]
-    hashList=getHashList(oldCellList)
-    for cellCount, code in enumerate(list(filter(None, fileContent.split(Constants.CellDelimiter)))):
+    sourceList=getSourceList(oldCellList)
+
+    for cellCount, source in enumerate(list(filter(None, fileContent.split(Constants.CellDelimiter)))):
         #Hash to be used for identifying priviously run code
-        cellHash=hashCode(code)
+#        cellSource=hashCode(source)
         #Set outputs
-        cell=setOutputs(oldCellList, cellList, cellHash, hashList)
+        cell=setOutputs(oldCellList, source, sourceList)
+
         #Set Code
-        cell['code']=code
-        #That cell count(it's order in the cell list)
+        cell['source']=source
+
+        #Set cell count(it's order in the cell list)
         cell['cellCount']=str(cellCount)
         cellList.append(cell)
+
     return cellList
 
-#Form the hashes from the cell list into a list
-def getHashList(cellList):
-    return [cell['hash'] for cell in cellList]
+def getSourceList(cellList):
+    '''
+    Form the hashes from the cell list into a list
+    '''
+    return [cell['source'] for cell in cellList]
 
-#Set outputs of cell depending on whether it has been run before 
-def setOutputs(oldCellList, cellList, cellHash, hashList, dl='list'):
-    #for one cell
-    if dl=='list':
-        return assembleCell(oldCellList, hashList, cellHash)
-    else:
-        cellDict['hash'].append(cellHash)
-        try:
-            x=oldCellDict['hash'].index(cellHash)
-            cellDict['changed'].append(False)
-            cellDict['stdout'].append(oldCellDict['stdout'][x])
-            cellDict['stderr'].append(oldCellDict['stderr'][x])
-            cellDict['image/png'].append(oldCellDict['image/png'][x])
-        except IndexError:
-            cellDict['changed'].append(True)
-            cellDict['stdout'].append('')
-            cellDict['stderr'].append('')
-            cellDict['image/png'].append('')
+def setOutputs(oldCellList, cellSource, sourceList):
+    '''
+    Set outputs of cell depending on whether it has been run before 
+    '''
+    return assembleCell(oldCellList, sourceList, cellSource)
 
-#If the hash exists set new cell to old cell
-def assembleCell(oldCellList, hashList, cellHash):
-        cell=copy.deepcopy(Constants.Cell)
-        '''
-        Check if the cell existed before
-        If it has set to old cell
-        '''
-        try:
-            x=hashList.index(cellHash)
-            cell=oldCellList[x]
-        #If not, change hash, set changed, and new changed
-        except ValueError:
-            cell['changed']=True
-            cell['time']=time.strftime("%x %X", time.gmtime())
-            cell['hash']=cellHash
-        return cell
+def assembleCell(oldCellList, sourceList, cellSource):
+    '''
+    If the source preexists, set new cell to old cell
+    If not, set changed, and last changed time.
+    '''
+
+    cell=copy.deepcopy(Constants.Cell)
+
+    try:
+        x=sourceList.index(cellSource)
+        cell=oldCellList[x]
+
+    except ValueError:
+        cell['changed']=True
+        cell['last_changed']=time.strftime("%x %X", time.gmtime())
+
+    return cell
 
 #Hash the string of code
-def hashCode(code):
-    return md5(code.encode()).hexdigest()
+def hashSource(source):
+    return md5(source.encode()).hexdigest()
 
 #Old func for pre=try/catch
-def isChanged(cellHash, hashList):
+def isChanged(cellSource, sourceList):
         try:
-            hashList.index(cellHash)
+            sourceList.index(cellSource)
             return True
         except ValueError:
             return False

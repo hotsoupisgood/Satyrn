@@ -1,5 +1,4 @@
-import time, sys, datetime, glob, re, sys, time, os, copy
-from flask import url_for
+import datetime, glob, re, sys, time, os, copy
 from pygments import highlight
 from pygments.lexers import BashLexer, PythonLexer
 from pygments.formatters import HtmlFormatter

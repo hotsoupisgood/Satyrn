@@ -10,11 +10,12 @@ setup(
         description='Automatically runs and displays python code in browser.',
         author_email='hairyhenry@gmail.com',
         url='https://github.com/hotsoupisgood/Satyrn',
-#        include_package_data=True,
+        include_package_data=True,
+        packages = ['thebe/templates', 'thebe/static', 'thebe/core'],
         package_data={
-                'thebe': [ 'templates/*','static/*','core/*']
+            'templates': ['*'], 'static': ['*'], 'core': ['*']
                 },
-        packages=find_packages(),
+#        packages=find_packages(),
         install_requires=[
             'flask',
             'flask_socketio',
