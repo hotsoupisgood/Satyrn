@@ -8,7 +8,12 @@ document.addEventListener("DOMContentLoaded", function(){
 			spinnerHtml:'<div class="lds-grid"></div>'
 
 		},
-		delimiters: ['[[',']]']
+		delimiters: ['[[',']]'],
+		updated: function () {
+			this.$nextTick(function () {
+				hljs.initHighlighting()
+			})
+		}
 	})
 	var socket = io();
 	function myCallback() {

@@ -54,10 +54,11 @@ def assembleCell(oldCellList, sourceList, cellSource):
     cell=copy.deepcopy(Constants.Cell)
 
     try:
-        x=sourceList.index(cellSource)
+        x=sourceList.index(cellSource.splitlines(True))
         cell=oldCellList[x]
 
     except ValueError:
+        print('Cell %s\thas changed.'%(cell['cellCount'],))
         cell['changed']=True
         cell['last_changed']=time.strftime("%x %X", time.gmtime())
 

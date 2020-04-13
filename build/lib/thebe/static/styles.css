@@ -24,6 +24,13 @@ img {
 .cell .maincode {
 	padding: 3px;
 }
+.cell .maincode pre {
+	margin: 0;
+	white-space: normal;
+}
+.cell .maincode pre code {
+	padding: 0;
+}
 .bottom {
 	display: flex;
 	flex-direction: column;
@@ -200,3 +207,4 @@ img {
     opacity: 0.5;
   }
 }
+

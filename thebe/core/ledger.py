@@ -21,6 +21,7 @@ def update(oldCellList, fileContent):
     for cellCount, source in enumerate(list(filter(None, fileContent.split(Constants.CellDelimiter)))):
         #Hash to be used for identifying priviously run code
 #        cellSource=hashCode(source)
+        cell['cellCount']=str(cellCount)
         #Set outputs
         cell=setOutputs(oldCellList, source, sourceList)
 
@@ -28,7 +29,6 @@ def update(oldCellList, fileContent):
         cell['source']=source
 
         #Set cell count(it's order in the cell list)
-        cell['cellCount']=str(cellCount)
         cellList.append(cell)
 
     return cellList
@@ -54,7 +54,7 @@ def assembleCell(oldCellList, sourceList, cellSource):
     cell=copy.deepcopy(Constants.Cell)
 
     try:
-        x=sourceList.index(cellSource)
+        x=sourceList.index(cellSource.splitlines(True))
         cell=oldCellList[x]
 
     except ValueError:

@@ -11,40 +11,19 @@ from pygments.formatters import HtmlFormatter
 from flask_socketio import emit, SocketIO
 import thebe.core.constants as Constant
 
-
-def cells(cells, globalScope, localScope):
-    cellOutput=[]
-    for cellLoc, changed in enumerate(cells):
-        stdout=''
-        stderr=''
-        plotData=''
-        #If a cell has not changed keep the current output
-        if changed:
-            stdout, stderr, plotData=runWithExec(cell['code'][cellLoc], globalScope, localScope)
-            changed=False
-            cells['stdout'][cellLoc]=stdout
-            cells['stderr'][cellLoc]=stderr
-            cells['image/png'][cellLoc]=plotData
-        #Keep the master list updated
-        else:
-            stdout=cells['stdout'][cellLoc]
-            stderr=cells['stderr'][cellLoc]
-            plotData=cells['image/png'][cellLoc]
-        cellOutput.append({'stdout':stdout, 'stderr':stderr, 'image/png':plotData})
-    return cellOutput
-
 def runNewCells(cellsToRun, globalScope, localScope):
     '''
     Run each changed cell, returning the output.
     '''
 
-    cellOutput=[]
-    plots=[]
+    cellOutput = []
     for cellCount, cell in enumerate(cellsToRun):
         #Keep the master list updated
         if cell['changed']:
 
-            stdout, stderr, plotData=runWithExec(cell['source'], globalScope, localScope)
+            stdout, stderr, plotData = runWithExec(cell['source'], globalScope, localScope)
+
+            clearOutputs(cell)
 
             fillPlot(cell, plotData)
             fillStdOut(cell, stdout)
@@ -52,6 +31,8 @@ def runNewCells(cellsToRun, globalScope, localScope):
 
             # How does ipython do this?
             cell['changed']=False
+
+            cell['source'] = cell['source'].splitlines(True)
 
         cellOutput.append(cell)
 #    print('After run:\t%s'%[cell['image/png'][-10:] for cell in cellsToRun])
@@ -111,12 +92,18 @@ def getPlotData(globalScope, localScope):
         stdout=''
     return stdout
 
+def clearOutputs(cell):
+    '''
+    Replace list of outputs with an empty one.
+    '''
+    cell['outputs'] = []
+
 def fillPlot(cell, plot):
     '''
     If an image exists in the plot variable, create and return a plot cell.
     '''
     if plot:
-        output = Constant.DisplayDataOutput
+        output = Constant.getDisplayOutput()
         output['data']['image/png'] = plot
         cell['outputs'].append(output)
 
@@ -125,7 +112,7 @@ def fillStdOut(cell, stdOut):
     If an output exists in the stdOut variable, create and return a stdOut cell.
     '''
     if stdOut:
-        output = Constant.DisplayDataOutput
+        output = Constant.getExecuteOutput()
         output['data']['text/plain'] = stdOut.splitlines(True)
         cell['outputs'].append(output)
 
@@ -134,6 +121,6 @@ def fillErr(cell, err):
     If an output exists in the err variable, create and return a err cell.
     '''
     if err:
-        output = Constant.ErrorOutput
+        output = Constant.getErrorOutput()
         output['traceback'] = err.splitlines(True)
         cell['outputs'].append(output)
