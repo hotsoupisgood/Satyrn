@@ -18,8 +18,7 @@
 			</div>
 			<div class="maincode">
 				<div v-for="source in cell.source">
-					<pre><code class="language-python">
-						[[ source ]]
+					<pre><code v-html="source" class="language-python">
 					</code></pre>
 				</div>
 			</div>

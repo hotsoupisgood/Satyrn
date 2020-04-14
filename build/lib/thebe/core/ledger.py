@@ -28,8 +28,8 @@ def update(oldCellList, fileContent):
         cell['source']=source
 
         #Set cell count(it's order in the cell list)
-        cell['cellCount']=str(cellCount)
         cellList.append(cell)
+        cell['cellCount']=str(cellCount)
 
     return cellList
 
@@ -58,7 +58,6 @@ def assembleCell(oldCellList, sourceList, cellSource):
         cell=oldCellList[x]
 
     except ValueError:
-        print('Cell %s\thas changed.'%(cell['cellCount'],))
         cell['changed']=True
         cell['last_changed']=time.strftime("%x %X", time.gmtime())
 

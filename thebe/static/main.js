@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", function(){
 		},
 		delimiters: ['[[',']]'],
 		updated: function () {
+			hljs.initHighlighting()
 			this.$nextTick(function () {
 				hljs.initHighlighting()
 			})

@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
+
 from pygments.formatters import HtmlFormatter
-from flask import Flask, render_template, Markup, Response, g
+from flask import Flask, render_template, Response, g
 from flask_socketio import SocketIO, emit
 from multiprocessing import Process
 import thebe.core.update as Update
-import time, os, sys, webbrowser, argparse, logging, sqlite3, logging
+import tempfile, time, os, sys, webbrowser, argparse, logging, json
 
 port=5000
+
 #Parse commandline argument
 parser = argparse.ArgumentParser(description='Display python information live in browser.')
 parser.add_argument('file', metavar='F', help='python file to run')
@@ -15,6 +17,27 @@ args = parser.parse_args()
 if args.port:
     port=int(args.port)
 fileLocation=args.file# file to execute
+
+if os.path.isfile(fileLocation):
+    try:
+        fileExtension=fileLocation.split('.')[1]
+        if fileExtension=='ipynb':
+            print('Is .ipynb')
+            with open(fileLocation) as ipynb_data:
+                data = json.load(ipynb_data)
+                print('Data: \n%s'%(data,))
+                sys.exit()
+        elif fileExtension=='py':
+            print('Is .py')
+        else:
+            print('Please use a valid file extension. (.ipynb or .py)')
+            sys.exit()
+    except ValueError:
+        print('Please use a valid file extension. (.ipynb or .py)')
+        sys.exit()
+else:
+    print('Thebe only works with files, not directories. Please try again with a file. (.ipynb or .py)')
+    sys.exit()
 
 #Initialize port and url
 url = 'localhost:%s' % port

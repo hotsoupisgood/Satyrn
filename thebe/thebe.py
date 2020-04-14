@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
+
 from pygments.formatters import HtmlFormatter
-from flask import Flask, render_template, Markup, Response, g
+from flask import Flask, render_template, Response, g
 from flask_socketio import SocketIO, emit
 from multiprocessing import Process
 import thebe.core.update as Update
-import time, os, sys, webbrowser, argparse, logging, sqlite3, logging
+import tempfile, time, os, sys, webbrowser, argparse, logging, json
 
 port=5000
+
 #Parse commandline argument
 parser = argparse.ArgumentParser(description='Display python information live in browser.')
 parser.add_argument('file', metavar='F', help='python file to run')
@@ -15,6 +17,7 @@ args = parser.parse_args()
 if args.port:
     port=int(args.port)
 fileLocation=args.file# file to execute
+
 
 #Initialize port and url
 url = 'localhost:%s' % port
@@ -54,6 +57,7 @@ def connect():
     Update.checkUpdate(socketio, fileLocation, connected=True)
     #Start pinging
     socketio.emit('ping client')
+
 @socketio.on('disconnect')
 def disconnect():
     print('Client disconnected')

@@ -21,7 +21,6 @@ def update(oldCellList, fileContent):
     for cellCount, source in enumerate(list(filter(None, fileContent.split(Constants.CellDelimiter)))):
         #Hash to be used for identifying priviously run code
 #        cellSource=hashCode(source)
-        cell['cellCount']=str(cellCount)
         #Set outputs
         cell=setOutputs(oldCellList, source, sourceList)
 
@@ -30,6 +29,7 @@ def update(oldCellList, fileContent):
 
         #Set cell count(it's order in the cell list)
         cellList.append(cell)
+        cell['cellCount']=str(cellCount)
 
     return cellList
 
