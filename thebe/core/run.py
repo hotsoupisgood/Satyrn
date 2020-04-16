@@ -1,6 +1,5 @@
 from itertools import zip_longest
-import copy
-import time, sys, datetime, glob, re, sys, time, os, copy
+import time, sys, datetime, glob, re, sys, time, os, copy, logging
 from hashlib import md5
 from io import StringIO
 from subprocess import Popen, PIPE
@@ -10,6 +9,8 @@ from pygments.lexers import BashLexer, PythonLexer
 from pygments.formatters import HtmlFormatter
 from flask_socketio import emit, SocketIO
 import thebe.core.constants as Constant
+from thebe.core.output import outputController 
+
 
 def runNewCells(cellsToRun, globalScope, localScope):
     '''
@@ -44,29 +45,40 @@ def runWithExec(cellCode, globalScope, localScope):
     runs one cell of code and return plotdata and std out/err
     '''
 
-    redirected_output=sys.stdout=StringIO()
-    redirected_error=sys.stderr=StringIO()
-
+#    redirected_output=sys.stdout=StringIO()
+#    redirected_error=sys.stderr=StringIO()
+#
     stdout=''
     stderr=''
+    def execPros():
+        exec(cellCode, globalScope, localScope)
+
+    outputController.open()
     try:
         sys.path.append(os.getcwd())
         exec(cellCode, globalScope, localScope)
-        stdout=redirected_output.getvalue()
-        stderr=''
+        stdout, stderr = outputController.close()
+#        stdout=redirected_output.getvalue()
+#        stderr=''
 
     except Exception as e:
-        stdout=redirected_output.getvalue()
-        stderr=str(e)
+        stdout, stderr = outputController.close()
+#        stdout=redirected_output.getvalue()
+#        stderr=str(e)
 
     finally:
         sys.path.pop()
-        sys.stdout=sys.__stdout__
-        sys.stderr=sys.__stderr__
+#        sys.stdout=sys.__stdout__
+#        sys.stderr=sys.__stderr__
 
     plotData=getPlotData(globalScope, localScope)
 
     return stdout, stderr, plotData
+def collectOutput(function):
+    outputController.open()
+    returns = () = function()
+    outputController.close()
+    return returns
 
 def getPlotData(globalScope, localScope):
     '''

@@ -1,8 +1,6 @@
-import sqlite3
+import sqlite3, logging, dill, os
 import thebe.core.constants as Constant
 from datetime import datetime
-import dill
-import os
 
 def dict_factory(cursor, row):
     d = {}
@@ -24,7 +22,6 @@ def getLedger(target):
         r=fetched
         return r['cells'], r['global_scope'], r['local_scope']
     else:
-        print('Creating ledger...')
         createLedger(target)
         return getLedger(target)
 
@@ -33,7 +30,7 @@ def getExecutions(target):
     return c.fetchone()['executions']
 
 def createLedger(target):
-    print('Creating ledger %s' % target)
+    logging.INFO('Adding\t%s\t to db...' % target)
     now=datetime.now().strftime('%a, %B, %d, %y')
     c.execute('INSERT INTO ledger (name, last_edit, created, cells, global_scope, local_scope) VALUES (?,?,?,?,?,?)', (target, now, now, dill.dumps([]), dill.dumps({}), dill.dumps({})))
 #    c.execute('INSERT INTO ledger (name, last_edit, created, cells, ledger, global_scope, local_scope) VALUES (?,?,?,?,?,?,?)', (target, now, now, dill.dumps([]), dill.dumps([]), dill.dumps({}), dill.dumps({})))

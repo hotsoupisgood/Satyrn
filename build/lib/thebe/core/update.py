@@ -41,7 +41,6 @@ def isModified(fileLocation, x=1):
 
 #Run code and send code and outputs to client
 def update(socketio, fileLocation, GlobalScope, LocalScope, Cells):
-    #print('gspre %s' % GlobalScope)
     '''
     Get some variables from database
     '''
@@ -71,15 +70,11 @@ def update(socketio, fileLocation, GlobalScope, LocalScope, Cells):
     Run the newly changed cells and return their output.
     '''
     output=Run.runNewCells(Cells, GlobalScope, LocalScope)
-#    print('After run:\t%s'%[cell['stdout'] for cell in Cells])
-    #output=Run.cells(Cells, GlobalScope, LocalScope)
 
     '''
     Send output to client
     '''
-    #print('\nOutput list:\n %s' % output)
     #socketio.emit('show output', output)
-#    Ledger.updateChanged(Cells)
     executions += 1
     print('The number of code executions is %d' % executions)
 #    html=Html.convertLedgerToHtml(Cells)

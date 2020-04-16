@@ -5,55 +5,47 @@ from flask import Flask, render_template, Response, g
 from flask_socketio import SocketIO, emit
 from multiprocessing import Process
 import thebe.core.update as Update
-import tempfile, time, os, sys, webbrowser, argparse, logging, json
+import thebe.core.args as args
+import thebe.core.cli as cli
+import thebe.core.vim as vim
+from thebe.core.output import outputController
+import thebe.core.ledger as ledger
+from thebe.core.vim import Vim
+import tempfile, time, os, sys, webbrowser, logging, json
 
-port=5000
+#outputController.open()
+#logging.INFO('testing')
+#outputController.open()
+#logging.INFO(' more testing')
+#s1,e1 = outputController.close()
+#s2,e2 = outputController.close()
+#logging.INFO('s1:\t%s\te1\t%s\ns2:\t%s\te2\t%s\n'%(s1,e1,s2,e2))
+#sys.exit()
 
-#Parse commandline argument
-parser = argparse.ArgumentParser(description='Display python information live in browser.')
-parser.add_argument('file', metavar='F', help='python file to run')
-parser.add_argument('port', metavar='P', help='port num')
-args = parser.parse_args()
-if args.port:
-    port=int(args.port)
-fileLocation=args.file# file to execute
-
-if os.path.isfile(fileLocation):
-    try:
-        fileExtension=fileLocation.split('.')[1]
-        if fileExtension=='ipynb':
-            print('Is .ipynb')
-            with open(fileLocation) as ipynb_data:
-                data = json.load(ipynb_data)
-                print('Data: \n%s'%(data,))
-                sys.exit()
-        elif fileExtension=='py':
-            print('Is .py')
-        else:
-            print('Please use a valid file extension. (.ipynb or .py)')
-            sys.exit()
-    except ValueError:
-        print('Please use a valid file extension. (.ipynb or .py)')
-        sys.exit()
-else:
-    print('Thebe only works with files, not directories. Please try again with a file. (.ipynb or .py)')
-    sys.exit()
-
-#Initialize port and url
-url = 'localhost:%s' % port
+port = args.getPort()
+target_loc = args.getFile()
 
 #Initialize flask
 app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 app.config['SECRET_KEY'] = 'secret!'
-socketio= SocketIO(app)
+socketio = SocketIO(app)
 
 #Configure logging
+logging.basicConfig(filename = os.path.dirname(__file__)+'/logs/all.log', level = logging.INFO)
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
-#Initialize some globals
-myDir=os.path.dirname(os.path.abspath(__file__))#Absolute directory of package
+#Determine what kind of file working with
+target_ext = cli.test_file(target_loc)
+vim = Vim()
+if target_ext == 'ipynb':
+    ipynb = cli.load_ipynb(target_loc)
+    ipynb_loc = target_loc
+    temp_loc = vim.write_temp(ledger.toThebe(ipynb), ipynb_loc.split('.')[0])
+    target_loc = temp_loc
+    vim.open()
+
 
 '''
 Set some headers and get and send css for all of the HtmlFormatter components.
@@ -72,14 +64,15 @@ Connect and disconnect events.
 '''
 @socketio.on('connect')
 def connect():
-    print('Connected to client')
+    logging.INFO('Connected to client')
     #Show
-    Update.checkUpdate(socketio, fileLocation, connected=True)
+    Update.checkUpdate(socketio, target_loc, connected=True)
     #Start pinging
     socketio.emit('ping client')
+
 @socketio.on('disconnect')
 def disconnect():
-    print('Client disconnected')
+    logging.INFO('Client disconnected')
 
 '''
 Ping back and forth from client to server.
@@ -87,8 +80,8 @@ Checks whether or not the file has been saved and running it when changed.
 '''
 @socketio.on('check if saved')
 def check():
-    print('Check if target updated...')
-    Update.checkUpdate(socketio, fileLocation)
+    ('Check if target updated...')
+    Update.checkUpdate(socketio, target_loc)
     socketio.emit('ping client')
 
 '''
@@ -100,11 +93,13 @@ def main():
         socketio.run(app, port=port)#, debug=True)
 #        webbrowser.open_new_tab(url)
     try:
-        print('Starting flask process...')
-        flask=Process(target=startFlask)
+        logging.INFO('Starting flask process...')
+        flask = Process(target = startFlask)
         flask.start()
     except KeyboardInterrupt:
-        print("Terminating flask server.")
+        logging.INFO('Deleting temporary file.')
+        vim.removeTemp()
+        logging.INFO("Terminating flask server.")
         flask.terminate()
         flask.join()
-        print("Terminated flask server.")
+        logging.INFO("Terminated flask server.")

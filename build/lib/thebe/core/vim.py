@@ -1,24 +1,62 @@
-import os
-from subprocess import call
+import os,sys, tempfile
+from io import StringIO
+from thebe.core.output import outputController
+from multiprocessing import Process
+from subprocess import call, check_output
 
-def run(initial_data):
-    # Get the text editor from the shell, otherwise default to Vim
-    EDITOR = os.environ.get('EDITOR','vim')
+class Vim:
+    def __init__(self):
+        self.temp_loc = ''
+        self.target_prefix = ''
 
-    # Open a temporary file to communicate through
-    with tempfile.NamedTemporaryFile(suffix=".tmp", delete=False) as tf:
+    def write_temp(self, initial_data, targetPrefix):
+        '''
+        Create a temporary file and load it with our initial data from the ipynb file.
+        Open vim in our temporary file.
+        '''
 
-        # Write the initial content to the file I/O buffer
-        tf.write(initial_data.encode())
+        self.target_prefix = targetPrefix
 
-        # Flush the I/O buffer to make sure the data is written to the file
-        tf.flush()
+        # Open a temporary file to communicate through
+        with tempfile.NamedTemporaryFile(prefix=self.target_prefix, suffix=".thebe", dir=os.getcwd(), delete=False) as tf:
 
-        print(tf.name)
-        # Open the file with the text editor
-        call([EDITOR, tf.name])
+            # Write the initial content to the file I/O buffer
+            tf.write(initial_data.encode())
 
-        tf.close()
-        with open(tf.name) as f:
-            print(f.read())
-        os.unlink(tf.name)
+            # Flush the I/O buffer to make sure the data is written to the file
+            tf.flush()
+
+            self.temp_loc = tf.name
+
+            tf.close()
+
+        return self.temp_loc
+
+    def open(self):
+        '''
+        '''
+        print('This is the location of the temporary file:\t%s'%(self.temp_loc))
+
+        def callVim():
+            # Open the file with the text editor
+    #        outputController.open()
+            so = sys.stdout = StringIO()
+            EDITOR = os.environ.get('EDITOR','vim')
+            call([EDITOR, self.temp_loc])
+    #        outputController.close()
+
+        try:
+            print('Starting vim process...')
+            vim = Process(target = callVim)
+            vim.start()
+
+        except KeyboardInterrupt:
+            print("Terminating vim server.")
+            vim.terminate()
+            vim.join()
+            print("Terminated flask server.")
+
+    def removeTemp(self):
+        '''
+        '''
+        os.unlink(self.temp_loc)

@@ -1,5 +1,5 @@
 from itertools import zip_longest
-import time, sys, datetime, glob, re, sys, time, os, copy
+import time, sys, datetime, glob, re, sys, time, os, copy, logging
 from hashlib import md5
 from io import StringIO
 from subprocess import Popen, PIPE
@@ -39,6 +39,14 @@ def getSourceList(cellList):
     '''
     return [cell['source'] for cell in cellList]
 
+def toThebe(ipynb):
+    '''
+    '''
+
+    return ''.join(['\n', Constants.CellDelimiter]).join([''.join(cell['source']) for cell in ipynb['cells']])
+    
+
+
 def setOutputs(oldCellList, cellSource, sourceList):
     '''
     Set outputs of cell depending on whether it has been run before 
@@ -66,34 +74,3 @@ def assembleCell(oldCellList, sourceList, cellSource):
 #Hash the string of code
 def hashSource(source):
     return md5(source.encode()).hexdigest()
-
-#Old func for pre=try/catch
-def isChanged(cellSource, sourceList):
-        try:
-            sourceList.index(cellSource)
-            return True
-        except ValueError:
-            return False
-
-#Old func 
-def getNewCellsToRun(ledger, allCellsList):
-    newCellsToRun=[]
-    for currentCell, ledgerCell in zip_longest(allCellsList, ledger, fillvalue=None):
-        if currentCell['hash']!=ledgerCell:
-            currentCell['changed']=True
-#            print(oldCell['stdout'])
-#            print(oldCell['hash'])
-        newCellsToRun.append(currentCell)
-    return newCellsToRun
-
-#Old func for when using dict of lists
-def dictToList(cellDict):
-    cellList=[]
-    keys=cellDict.keys()
-    values=cellDict.values()
-    for cell in np.array(values).t:
-        cellList.append(dict(zip(keys, cell)))
-    return cellList        
-
-def updateChanged(changedList):
-    changedList=[False for x in changedList]

@@ -1,4 +1,4 @@
-import datetime, glob, re, sys, time, os, copy
+import datetime, glob, re, sys, time, os, copy, logging
 from pygments import highlight
 from pygments.lexers import BashLexer, PythonLexer
 from pygments.formatters import HtmlFormatter

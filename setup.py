@@ -11,9 +11,9 @@ setup(
         author_email='hairyhenry@gmail.com',
         url='https://github.com/hotsoupisgood/Satyrn',
         include_package_data=True,
-        packages = ['thebe', 'thebe/templates', 'thebe/static', 'thebe/core'],
+        packages = ['thebe', 'thebe/templates', 'thebe/static', 'thebe/core', 'thebe/logs'],
         package_data={
-            'thebe':['thebe.py'], 'templates': ['*'], 'static': ['*'], 'core': ['*']
+            'thebe':['thebe.py'], 'templates': ['*'], 'static': ['*'], 'core': ['*'], 'logs': ['*']
                 },
 #        packages=find_packages(),
         install_requires=[
