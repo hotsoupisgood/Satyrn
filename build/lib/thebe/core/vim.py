@@ -1,37 +1,59 @@
 import os,sys, tempfile
 from io import StringIO
-from thebe.core.output import outputController
+#from thebe.core.output import outputController
 from multiprocessing import Process
 from subprocess import call, check_output
 
-class Vim:
-    def __init__(self):
-        self.temp_loc = ''
-        self.target_prefix = ''
+class FileManager:
+    def __init__(self, target_name):
+        self.temp_name = ''
+        self.target_name = target_name
 
-    def write_temp(self, initial_data, targetPrefix):
-        '''
-        Create a temporary file and load it with our initial data from the ipynb file.
-        Open vim in our temporary file.
-        '''
+        target_ext = self.test_file(self.target_name)
 
-        self.target_prefix = targetPrefix
+        if target_ext == 'ipynb':
+            self.ipynb_name = ipynb_name
+            ipynb_content = self.load_ipynb(target_name)
+            self.target_name = self.write_temp(ipynb_content)
 
-        # Open a temporary file to communicate through
-        with tempfile.NamedTemporaryFile(prefix=self.target_prefix, suffix=".thebe", dir=os.getcwd(), delete=False) as tf:
 
-            # Write the initial content to the file I/O buffer
-            tf.write(initial_data.encode())
+def test_file(targetLocation):
+    '''
+    Return the relevant extension. 
+    If input is incorrect, explain, and quit the application.
+    '''
+    if os.path.isfile(targetLocation):
+        try:
+            return test_extension(targetLocation)
+        except ValueError:
+            logging.info('Please use a valid file extension. (.ipynb or .py)')
+            sys.exit()
+    else:
+        logging.info('Thebe only works with files, not directories. Please try again with a file. (.ipynb or .py)')
+        sys.exit()
 
-            # Flush the I/O buffer to make sure the data is written to the file
-            tf.flush()
+def test_extension(targetLocation):
+    '''
+    '''
 
-            self.temp_loc = tf.name
+    targetExtension=targetLocation.split('.')[1]
+    if targetExtension=='ipynb':
+        return 'ipynb'
+    elif targetExtension=='py':
+        return 'py'
+    else:
+        logging.info('Please use a valid file extension. (.ipynb or .py)')
+        sys.exit()
 
-            tf.close()
+def load_ipynb(targetLocation):
+    '''
+    Return the ipynb file as a dictionary.
+    '''
 
-        return self.temp_loc
-
+    data = {}
+    with open(targetLocation) as ipynb_data:
+        data = json.load(ipynb_data)
+    return data
     def open(self):
         '''
         '''
@@ -56,7 +78,3 @@ class Vim:
             vim.join()
             print("Terminated flask server.")
 
-    def removeTemp(self):
-        '''
-        '''
-        os.unlink(self.temp_loc)

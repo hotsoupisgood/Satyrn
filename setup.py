@@ -11,11 +11,12 @@ setup(
         author_email='hairyhenry@gmail.com',
         url='https://github.com/hotsoupisgood/Satyrn',
         include_package_data=True,
-        packages = ['thebe', 'thebe/templates', 'thebe/static', 'thebe/core', 'thebe/logs'],
-        package_data={
-            'thebe':['thebe.py'], 'templates': ['*'], 'static': ['*'], 'core': ['*'], 'logs': ['*']
-                },
-#        packages=find_packages(),
+#        packages = ['thebe', 'thebe/templates', 'thebe/static', 'thebe/core', 'thebe/logs'],
+        packages=find_packages(),
+#        package_data={
+#            'thebe':['thebe.py'], 'templates': ['*'], 'static': ['*'], 'core': ['*'], 'logs': ['all.log']
+#                },
+#        data_files = [('thebe', ['logs/*.log'])],
         install_requires=[
             'flask',
             'flask_socketio',

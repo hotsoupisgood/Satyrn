@@ -9,10 +9,10 @@ def test_file(targetLocation):
         try:
             return test_extension(targetLocation)
         except ValueError:
-            logging.INFO('Please use a valid file extension. (.ipynb or .py)')
+            logging.info('Please use a valid file extension. (.ipynb or .py)')
             sys.exit()
     else:
-        logging.INFO('Thebe only works with files, not directories. Please try again with a file. (.ipynb or .py)')
+        logging.info('Thebe only works with files, not directories. Please try again with a file. (.ipynb or .py)')
         sys.exit()
 
 def test_extension(targetLocation):
@@ -25,7 +25,7 @@ def test_extension(targetLocation):
     elif targetExtension=='py':
         return 'py'
     else:
-        logging.INFO('Please use a valid file extension. (.ipynb or .py)')
+        logging.info('Please use a valid file extension. (.ipynb or .py)')
         sys.exit()
 
 def load_ipynb(targetLocation):

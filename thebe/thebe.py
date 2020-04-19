@@ -8,22 +8,12 @@ import thebe.core.update as Update
 import thebe.core.args as args
 import thebe.core.cli as cli
 import thebe.core.vim as vim
-from thebe.core.output import outputController
-import thebe.core.ledger as ledger
-from thebe.core.vim import Vim
-import tempfile, time, os, sys, webbrowser, logging, json
-
-#outputController.open()
-#logging.INFO('testing')
-#outputController.open()
-#logging.INFO(' more testing')
-#s1,e1 = outputController.close()
-#s2,e2 = outputController.close()
-#logging.INFO('s1:\t%s\te1\t%s\ns2:\t%s\te2\t%s\n'%(s1,e1,s2,e2))
-#sys.exit()
+import thebe.core.data as data
+import thebe.core.file as fm
+import tempfile, time, os, sys, webbrowser, logging, logging.config, json
 
 port = args.getPort()
-target_loc = args.getFile()
+target_name = args.getFile()
 
 #Initialize flask
 app = Flask(__name__)
@@ -33,19 +23,11 @@ socketio = SocketIO(app)
 
 #Configure logging
 logging.basicConfig(filename = os.path.dirname(__file__)+'/logs/all.log', level = logging.INFO)
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
+#log = logging.getLogger('werkzeug')
+#log.setLevel(logging.ERROR)
 
 #Determine what kind of file working with
-target_ext = cli.test_file(target_loc)
-vim = Vim()
-if target_ext == 'ipynb':
-    ipynb = cli.load_ipynb(target_loc)
-    ipynb_loc = target_loc
-    temp_loc = vim.write_temp(ledger.toThebe(ipynb), ipynb_loc.split('.')[0])
-    target_loc = temp_loc
-    vim.open()
-
+target_name, is_ipynb = fm.setup(target_name)
 
 '''
 Set some headers and get and send css for all of the HtmlFormatter components.
@@ -64,15 +46,15 @@ Connect and disconnect events.
 '''
 @socketio.on('connect')
 def connect():
-    logging.INFO('Connected to client')
+    logging.info('Connected to client')
     #Show
-    Update.checkUpdate(socketio, target_loc, connected=True)
+    Update.checkUpdate(socketio, target_name, connected = True, isIpynb = is_ipynb)
     #Start pinging
     socketio.emit('ping client')
 
 @socketio.on('disconnect')
 def disconnect():
-    logging.INFO('Client disconnected')
+    logging.info('Client disconnected')
 
 '''
 Ping back and forth from client to server.
@@ -81,7 +63,7 @@ Checks whether or not the file has been saved and running it when changed.
 @socketio.on('check if saved')
 def check():
     ('Check if target updated...')
-    Update.checkUpdate(socketio, target_loc)
+    Update.checkUpdate(socketio, target_name, isIpynb = is_ipynb)
     socketio.emit('ping client')
 
 '''
@@ -93,13 +75,11 @@ def main():
         socketio.run(app, port=port)#, debug=True)
 #        webbrowser.open_new_tab(url)
     try:
-        logging.INFO('Starting flask process...')
+        logging.info('Starting flask process...')
         flask = Process(target = startFlask)
         flask.start()
     except KeyboardInterrupt:
-        logging.INFO('Deleting temporary file.')
-        vim.removeTemp()
-        logging.INFO("Terminating flask server.")
+        logging.info("Terminating flask server.")
         flask.terminate()
         flask.join()
-        logging.INFO("Terminated flask server.")
+        logging.info("Terminated flask server.")

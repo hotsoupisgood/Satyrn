@@ -1,4 +1,5 @@
-import sqlite3, logging, dill, os
+import sqlite3, logging, dill, os, sys, time
+
 import thebe.core.constants as Constant
 from datetime import datetime
 
@@ -16,6 +17,9 @@ conn.row_factory = dict_factory
 c = conn.cursor()
 
 def getLedger(target):
+    '''
+    Get the data objects, if they do not exist create them.
+    '''
     c.execute('SELECT * FROM ledger WHERE name=?', (target,))
     fetched=c.fetchone()
     if bool(fetched):
@@ -30,10 +34,16 @@ def getExecutions(target):
     return c.fetchone()['executions']
 
 def createLedger(target):
-    logging.INFO('Adding\t%s\t to db...' % target)
+    logging.info('Adding\t%s\t to db...' % target)
     now=datetime.now().strftime('%a, %B, %d, %y')
     c.execute('INSERT INTO ledger (name, last_edit, created, cells, global_scope, local_scope) VALUES (?,?,?,?,?,?)', (target, now, now, dill.dumps([]), dill.dumps({}), dill.dumps({})))
 #    c.execute('INSERT INTO ledger (name, last_edit, created, cells, ledger, global_scope, local_scope) VALUES (?,?,?,?,?,?,?)', (target, now, now, dill.dumps([]), dill.dumps([]), dill.dumps({}), dill.dumps({})))
 
 def update(target, cells, globalScope, localScope, executions):
-    c.execute('UPDATE ledger SET cells=?, global_scope=?, local_scope=?, executions=? WHERE name=?', (dill.dumps(cells), dill.dumps(globalScope), dill.dumps(localScope), executions, target))
+#    localScope = {}# if localScope == None else localScope
+    localdump = {}
+    try:
+        localdump = dill.dumps(localScope)
+    except AttributeError:
+        logging.debug('Dill pickling the local scope, yields an error')
+    c.execute('UPDATE ledger SET cells=?, global_scope=?, local_scope=?, executions=? WHERE name=?', (dill.dumps(cells), dill.dumps(globalScope), dill.dumps(localdump), executions, target))
