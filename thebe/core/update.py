@@ -3,28 +3,37 @@ import thebe.core.run as Run
 import thebe.core.html as Html
 import thebe.core.data as data
 import thebe.core.constants as Constants 
-import os, time, logging, json
+import os, time, logging, json, threading
+
+isActive = False
 
 def checkUpdate(socketio, fileLocation, connected=False, isIpynb=False):
     '''
     Combines isModified and update functions. 
     '''
 
-    #Get file target information from database if it exists
-    Cells, GlobalScope, LocalScope  = Database.getLedger(fileLocation)
-
-    #If it's modified or if it's the first time it has run, update.
-    if isModified(fileLocation) or not GlobalScope:
-        time.sleep(1)
-        update(socketio, fileLocation, GlobalScope, LocalScope, Cells, isIpynb)
-        time.sleep(1)
-
-    elif connected==True:
-#        html=Html.convertLedgerToHtml(Cells)
-        socketio.emit('show all', Cells)
-
+    '''
+    If code is currently being executed,
+    stop checkUpdate. Send some feedback to client.
+    '''
+    if isActive:
+        socketio.emit('flash')
     else:
-        time.sleep(1)
+        #Get file target information from database if it exists
+        Cells, GlobalScope, LocalScope  = Database.getLedger(fileLocation)
+
+        #If it's modified or if it's the first time it has run, update.
+        if isModified(fileLocation) or not GlobalScope:
+            time.sleep(1)
+            update(socketio, fileLocation, GlobalScope, LocalScope, Cells, isIpynb)
+            time.sleep(1)
+
+        elif connected==True:
+    #        html=Html.convertLedgerToHtml(Cells)
+            socketio.emit('show all', Cells)
+
+        else:
+            time.sleep(1)
 
 #Run code and send code and outputs to client
 def update(socketio, fileLocation, GlobalScope, LocalScope, Cells, isIpynb):
@@ -34,7 +43,6 @@ def update(socketio, fileLocation, GlobalScope, LocalScope, Cells, isIpynb):
     '''
     Get some variables from database
     '''
-    executions = Database.getExecutions(fileLocation)
 
     '''
     Get target file
@@ -45,8 +53,8 @@ def update(socketio, fileLocation, GlobalScope, LocalScope, Cells, isIpynb):
     '''
     Look at the file to see if anything has changed
     in the data.
-    If there is a change, return updated ledger, and a list
-    of cells that need executing.
+    Return an updated ipynb,
+    with proper changed values.
     '''
     Cells = data.update(Cells, fileContent)
 
@@ -56,26 +64,33 @@ def update(socketio, fileLocation, GlobalScope, LocalScope, Cells, isIpynb):
     '''
 #    socketio.emit('show loading', htmlAllCells)
 
-    '''
-    Run the newly changed cells and return their output.
-    '''
-    output=Run.runNewCells(Cells, GlobalScope, LocalScope)
+    def runThread():
+        isActive = True
+        '''
+        Run the newly changed cells and return their output.
+        '''
+        output=Run.runNewCells(Cells, GlobalScope, LocalScope)
 
-    '''
-    Send output to client
-    '''
-    #socketio.emit('show output', output)
-    executions += 1
-    logging.info('The number of code executions is %d' % executions)
-#    html=Html.convertLedgerToHtml(Cells)
-    socketio.emit('show all', Cells)
+        '''
+        Send output to client
+        '''
+        #socketio.emit('show output', output)
+        executions = Database.getExecutions(fileLocation)
+        executions += 1
+        logging.info('The number of code executions is %d' % executions)
+    #    html=Html.convertLedgerToHtml(Cells)
+        socketio.emit('show all', Cells)
 
-    '''
-    Update the database with the fresh code.
-    '''
-    Database.update(fileLocation, Cells, GlobalScope, LocalScope, executions)
-    if isIpynb:
-        updateIpynb(fileLocation, Cells)
+        '''
+        Update the database with the fresh code.
+        '''
+        Database.update(fileLocation, Cells, GlobalScope, LocalScope, executions)
+        if isIpynb:
+            updateIpynb(fileLocation, Cells)
+        isActive = False
+    t = threading.Thread(target = runThread, args = ())
+    t.start()
+
 
 def updateIpynb(fileLocation, Cells):
     '''
