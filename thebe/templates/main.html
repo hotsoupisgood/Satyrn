@@ -1,52 +1,77 @@
 <head>
-	<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/default.min.css">
-	<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
-	<!-- <link rel="stylesheet" href="{{ url_for('static', filename='highlight/styles/default.css') }}"> -->
-	<!-- <script src="{{ url_for('static', filename='highlight/highlight.pack.js') }}"></script> -->
-	<script type="text/javascript" src="{{ url_for('static', filename='socket.io.slim.js') }}"></script>
-	<link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles.css') }}">
-	<script type="text/javascript" src="{{ url_for('static', filename='main.js') }}"></script>
-	<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
-	<!--	<script type="text/javascript" src="{{ url_for('static', filename='vue.min.js') }}"></script>-->
-	<style> {{css}} </style>
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/default.min.css">
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<!-- <link rel="stylesheet" href="{{ url_for('static', filename='highlight/styles/default.css') }}"> -->
+<!-- <script src="{{ url_for('static', filename='highlight/highlight.pack.js') }}"></script> -->
+<script type="text/javascript" src="{{ url_for('static', filename='socket.io.slim.js') }}"></script>
+<link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles.css') }}">
+<script type="text/javascript" src="{{ url_for('static', filename='main.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<!--	<script type="text/javascript" src="{{ url_for('static', filename='vue.min.js') }}"></script>-->
+<style> {{css}} </style>
 </head>
 <body>
-	<div id="app">
-		<div class="cell" v-for="cell in cells">
-			<div class="top">
-				[[ cell.last_changed ]]
-			</div>
-			<div class="maincode">
-				<div v-for="source in cell.source">
-					<pre><code v-html="source" class="language-python">
-					</code></pre>
-				</div>
-			</div>
-			<div class="bottom">
-				<div class="termout">
-					<div class="outputs" v-for="output in cell.outputs">
-						<div class="stdout" v-if="output.output_type === 'execute_result'">
-							Standard Output:<br>
-							<div class="output" v-for="data in output['data']['text/plain']">
-								<pre><code class="language-bash">
-									<div v-html="data"></div>
-								</code></pre>
-							</div>
-						</div>
-						<div class="stderr" v-if="output.output_type === 'error'">
-							Standard Error:<br>
-							<div class="output" v-for="data in output['traceback']">
-								<pre><code class="language-bash">
-									<div v-html="data"></div>
-								</code></pre>
-							</div>
-						</div>
-						<div v-if="output.output_type === 'display_data'">
-							<img v-bind:src="'data:image/png;base64, ' + output['data']['image/png']" />
-						</div>
+<div id="app">
+<header>
+<div id = "logo">
+	Thebe
+</div>
+<transition-group name = "messages" tag = "div">
+	<div v-for = "(message, index) in messages" v-bind:key = "index">
+	<div class = "message" v-if = "index == messages.length-1">
+		[[ message ]]
+	</div>
+	</div>
+</transition-group>
+</header>
+<div class="cells">
+<div class="cell" v-for="(cell, index) in cells">
+	<div class="top">
+		<div class = "loader" v-if = "index == loading"></div>
+		<div class = "top-attribute">
+			[[ cell.last_changed ]]
+		</div>
+		<div class = "top-attribute">
+			Execution count: [[ cell.execution_count ]]
+		</div>
+		<div class = "top-attribute">
+			Cell #[[ index ]]
+		</div>
+	</div>
+	<div class="maincode">
+		<div v-for="source in cell.source">
+			<pre><code v-html="source" class="language-python">
+			</code></pre>
+		</div>
+	</div>
+	<transition name = "bottom">
+	<div class="bottom" v-if = "cell.outputs.length > 0">
+		<div class="termout">
+			<div class="outputs" v-for="output in cell.outputs">
+				<div class="stdout" v-if="output.output_type === 'execute_result'">
+					Standard Output:<br>
+					<div class="output" v-for="data in output['data']['text/plain']">
+						<pre><code class="language-bash">
+							<div v-html="data"></div>
+						</code></pre>
 					</div>
+				</div>
+				<div class="stderr" v-if="output.output_type === 'error'">
+					Standard Error:<br>
+					<div class="output" v-for="data in output['traceback']">
+						<pre><code class="language-bash">
+							<div v-html="data"></div>
+						</code></pre>
+					</div>
+				</div>
+				<div v-if="output.output_type === 'display_data'">
+					<img v-bind:src="'data:image/png;base64, ' + output['data']['image/png']" />
 				</div>
 			</div>
 		</div>
+		</div>
 	</div>
+</div>
+</div>
+</div>
 </body>

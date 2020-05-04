@@ -1,1 +1,5 @@
-recursive-include thebe/logs *
+graft thebe/core
+graft thebe/static
+graft thebe/templates
+graft thebe
+

@@ -31,9 +31,13 @@ def update(oldCellList, fileContent):
         #Set Code
         cell['source'] = source
 
-        #Set cell count(it's order in the cell list)
+        #Set execution counter
+        try:
+            cell['execution_count'] = oldCellList[cellCount]['execution_count'] 
+        except IndexError:
+            pass
+
         cellList.append(cell)
-        cell['cellCount']=str(cellCount)
 
     return cellList
 
@@ -71,6 +75,7 @@ def assembleCell(oldCellList, sourceList, cellSource):
         cell=oldCellList[x]
 
     except ValueError:
+        cell['execution_count']
         cell['changed']=True
         cell['last_changed']=time.strftime("%x %X", time.gmtime())
 

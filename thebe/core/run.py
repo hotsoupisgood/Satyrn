@@ -13,7 +13,13 @@ import thebe.core.constants as Constant
 import thebe.core.output as output 
 #from thebe.core.output import outputController 
 
-def runNewCells(cellsToRun, globalScope, localScope):
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+file_handler = logging.FileHandler(os.path.dirname(__file__)+'/logs/executionrecord.log')
+logger.addHandler(file_handler)
+
+def runNewCells(socketio, cellsToRun, globalScope, localScope):
     '''
     Run each changed cell, returning the output.
     '''
@@ -22,7 +28,10 @@ def runNewCells(cellsToRun, globalScope, localScope):
     for cellCount, cell in enumerate(cellsToRun):
         #Keep the master list updated
         if cell['changed']:
-            logging.info('Running cell #%s'%(cellCount,))
+            socketio.emit('message', 'Running cell #%s'%(cellCount))
+            socketio.emit('loading', cellCount)
+#            logger.info('\n------------------------\nRunning cell #%s\n-------------------------------\
+#                    \nWith code:\n%s'%(cellCount, cell['source']))
             stdout, stderr, plotData = runWithExec(cell['source'], globalScope, localScope)
 
             clearOutputs(cell)
@@ -33,8 +42,10 @@ def runNewCells(cellsToRun, globalScope, localScope):
 
             # How does ipython do this?
             cell['changed']=False
+            cell['execution_count'] = cell['execution_count'] + 1
+            logger.info('exe co: %s'%(cell['execution_count'],))
 
-#            logging.debug('Cell source, in output class:\t%s\n'%(cell['source']))
+#            logger.debug('Cell source, in output class:\t%s\n'%(cell['source']))
 
         cellOutput.append(cell)
 
@@ -44,6 +55,12 @@ def runWithExec(cellCode, globalScope, localScope):
     '''
     runs one cell of code and return plotdata and std out/err
     '''
+
+    #Append the current working directory to path(not sure if this is necessary)
+    sys.path.append(os.getcwd())
+
+#    oldGlobalScope = copy.deepcopy(globalScope)
+#    oldLocalScope = copy.deepcopy(localScope)
     
     #Save the old output location
     oldstdout = sys.stdout
@@ -51,23 +68,22 @@ def runWithExec(cellCode, globalScope, localScope):
     #Redirect system output, and initialize system error
     stdout = sys.stdout=StringIO()
     stderr = ''
-
-    #Append the current working directory to path(not sure if this is necessary)
-    sys.path.append(os.getcwd())
+    plotData = ''
 
     try:
         exec(''.join(cellCode), globalScope, localScope)
+        sys.stdout = oldstdout
+        stdout = stdout.getvalue() 
+        sys.path.pop()
+        plotData = getPlotData(globalScope, localScope)
 
     except Exception as e:
+#        globalScope = oldGlobalScope
+#        localScope = oldLocalScope
         stderr = str(e)
-
-    sys.path.pop()
-
-    sys.stdout = oldstdout
-
-    stdout = stdout.getvalue() 
-
-    plotData = getPlotData(globalScope, localScope)
+        sys.stdout = oldstdout
+        stdout = stdout.getvalue() 
+        sys.path.pop()
 
     return stdout, stderr, plotData
 
@@ -143,7 +159,7 @@ class RunController:
         for cellCount, cell in enumerate(cellsToRun):
             #Keep the master list updated
             if cell['changed']:
-                logging.info('Running cell #%s'%(cellCount,))
+                logger.info('Running cell #%s'%(cellCount,))
                 stdout, stderr, plotData = runWithExec(cell['source'], globalScope, localScope)
 
                 clearOutputs(cell)
@@ -155,7 +171,7 @@ class RunController:
                 # How does ipython do this?
                 cell['changed']=False
 
-    #            logging.debug('Cell source, in output class:\t%s\n'%(cell['source']))
+    #            logger.debug('Cell source, in output class:\t%s\n'%(cell['source']))
 
             cellOutput.append(cell)
 
@@ -177,9 +193,7 @@ class RunController:
         sys.path.append(os.getcwd())
 
         try:
-            print('before start')
             exec(''.join(cellCode), globalScope, localScope)
-            print('after start')
         except Exception as e:
             stderr = str(e)
 

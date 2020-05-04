@@ -5,40 +5,46 @@ import thebe.core.data as data
 import thebe.core.constants as Constants 
 import os, time, logging, json, threading
 
-isActive = False
-
-def checkUpdate(socketio, fileLocation, connected=False, isIpynb=False):
+def checkUpdate(socketio, fileLocation, connected=False, \
+        isIpynb=False, GlobalScope=None, LocalScope=None, Cells=None):
+#    print('cells:\n-------------------------------\n%s'%(Cells,))
     '''
     Combines isModified and update functions. 
     '''
-
+    
     '''
     If code is currently being executed,
     stop checkUpdate. Send some feedback to client.
     '''
-    if isActive:
-        socketio.emit('flash')
-    else:
-        #Get file target information from database if it exists
-        Cells, GlobalScope, LocalScope  = Database.getLedger(fileLocation)
+#    if GlobalScope == None or LocalScope == None or Cells == None:
+    Cells, iGlobalScope, iLocalScope  = Database.getLedger(fileLocation)
+    isActive = Database.getIsActive(fileLocation)
+    #Get file target information from database if it exists
 
-        #If it's modified or if it's the first time it has run, update.
-        if isModified(fileLocation) or not GlobalScope:
-            time.sleep(1)
-            update(socketio, fileLocation, GlobalScope, LocalScope, Cells, isIpynb)
-            time.sleep(1)
+    #If it's modified or if it's the first time it has run, update.
+    if isModified(fileLocation):
+        if isActive:
+            logging.info('flashing')
+            socketio.emit('flash')
+        else:
+            thread = update(socketio, fileLocation, GlobalScope, LocalScope, Cells, isIpynb)
 
-        elif connected==True:
-    #        html=Html.convertLedgerToHtml(Cells)
+    elif connected==True:
+        if not isActive:
+            if not GlobalScope:
+                thread = update(socketio, fileLocation, GlobalScope, LocalScope, Cells, isIpynb)
+            else: 
+                socketio.emit('show all', Cells)
+        else:
             socketio.emit('show all', Cells)
 
-        else:
-            time.sleep(1)
+    else:
+        pass
+    time.sleep(.5)
 
 #Run code and send code and outputs to client
 def update(socketio, fileLocation, GlobalScope, LocalScope, Cells, isIpynb):
-
-    #logging.debug('Cells in the beginning\n---------------\n%s'%(Cells,))
+    isActive = Database.setIsActive(fileLocation)
 
     '''
     Get some variables from database
@@ -57,6 +63,7 @@ def update(socketio, fileLocation, GlobalScope, LocalScope, Cells, isIpynb):
     with proper changed values.
     '''
     Cells = data.update(Cells, fileContent)
+    socketio.emit('show all', Cells)
 
     '''
     Send a list of the cells that will run to the
@@ -64,12 +71,11 @@ def update(socketio, fileLocation, GlobalScope, LocalScope, Cells, isIpynb):
     '''
 #    socketio.emit('show loading', htmlAllCells)
 
-    def runThread():
-        isActive = True
+    def runThread(Cells, GlobalScope, LocalScope):
         '''
         Run the newly changed cells and return their output.
         '''
-        output=Run.runNewCells(Cells, GlobalScope, LocalScope)
+        Cells = Run.runNewCells(socketio, Cells, GlobalScope, LocalScope)
 
         '''
         Send output to client
@@ -84,13 +90,13 @@ def update(socketio, fileLocation, GlobalScope, LocalScope, Cells, isIpynb):
         '''
         Update the database with the fresh code.
         '''
+        Database.setActive(fileLocation, False)
         Database.update(fileLocation, Cells, GlobalScope, LocalScope, executions)
         if isIpynb:
             updateIpynb(fileLocation, Cells)
-        isActive = False
-    t = threading.Thread(target = runThread, args = ())
+    t = threading.Thread(target = runThread, args = (Cells, GlobalScope, LocalScope))
     t.start()
-
+    return t
 
 def updateIpynb(fileLocation, Cells):
     '''
@@ -101,7 +107,7 @@ def updateIpynb(fileLocation, Cells):
         ipynb['cells'] = Cells
         json.dump(ipynb, f)
 
-def isModified(fileLocation, x=1):
+def isModified(fileLocation, x=.5):
     '''
     Return true if the target file has been modified in the past x amount of time
     '''

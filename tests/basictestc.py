@@ -1,12 +1,12 @@
-import matplotlib.pyplot as plt
-import random
-print(random.random())
+print('Hello world')
+import time
+time.sleep(5)
+x = 0
 ####
-import test_import.test
-106%3
+x = x+1
+time.sleep(2)
+
+print(x+1)
 
 ####
-plt.plot(range(10))
-print(random.random())
-####
-print(random.random())
+

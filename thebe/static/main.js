@@ -1,36 +1,40 @@
 vm={}
 document.addEventListener("DOMContentLoaded", function(){
-	cells={}
+	messages = []
+	cells = {}
 	vm=new Vue({
 		el: '#app',
 		data: {
-			cells:cells,
-			spinnerHtml:'<div class="lds-grid"></div>'
-
+			cells: cells,
+			messages: messages,
+			loading: 'none',
+			spinnerHtml: '<div class="lds-grid"></div>'
 		},
 		delimiters: ['[[',']]'],
 		updated: function () {
-			hljs.initHighlighting()
 			this.$nextTick(function () {
 				hljs.initHighlighting()
 			})
 		}
 	})
 	var socket = io();
-	function myCallback() {
-//		socket.emit('checkOnUpdate')
-	 }
 	socket.on('connect', function() {
 		console.log('Connected to server');
         });
 	socket.on('disconnect', function() {
 		console.log('Disconnected to server');
         });
+	socket.on('message', function(message) {
+		messages.push(message)
+	});
+	socket.on('loading', function(loading) {
+		vm.loading = loading
+	})
+	socket.on('flash', function() {
+		messages.push('Cannot run new cells while old cells are still running...')
+	});
 	socket.on('ping client', function() {
 		socket.emit('check if saved')
-	});
-	socket.on('show loading', function(newCells) {
-		vm.cells=newCells
 	});
 	socket.on('show output', function(newOutput) {
 		for (var i in vm.cells){
@@ -42,6 +46,7 @@ document.addEventListener("DOMContentLoaded", function(){
 		}
 	});
 	socket.on('show all', function(cellList) {
-		vm.cells=cellList
+		vm.cells = cellList
+		vm.loading = 'none'
 	});
 });

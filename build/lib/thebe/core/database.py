@@ -30,20 +30,41 @@ def getLedger(target):
         return getLedger(target)
 
 def getExecutions(target):
+    '''
+    '''
     c.execute('SELECT executions FROM ledger WHERE name=?', (target,))
     return c.fetchone()['executions']
 
+def getIsActive(target):
+    '''
+    '''
+    c.execute('SELECT is_active FROM ledger WHERE name=?', (target,))
+    return c.fetchone()['is_active']
+
+def setIsActive(target):
+    '''
+    '''
+    c.execute('UPDATE ledger SET is_active=? WHERE name=?', \
+            (True, target))
+
 def createLedger(target):
+    '''
+    '''
     logging.info('Adding\t%s\t to db...' % target)
     now=datetime.now().strftime('%a, %B, %d, %y')
-    c.execute('INSERT INTO ledger (name, last_edit, created, cells, global_scope, local_scope) VALUES (?,?,?,?,?,?)', (target, now, now, dill.dumps([]), dill.dumps({}), dill.dumps({})))
-#    c.execute('INSERT INTO ledger (name, last_edit, created, cells, ledger, global_scope, local_scope) VALUES (?,?,?,?,?,?,?)', (target, now, now, dill.dumps([]), dill.dumps([]), dill.dumps({}), dill.dumps({})))
+    c.execute('INSERT INTO ledger (name, last_edit, created, cells, global_scope, local_scope, is_active) \
+            VALUES (?,?,?,?,?,?,?)', (target, now, now, dill.dumps([]), dill.dumps({}), dill.dumps({}), False))
+
+def setActive(target, active):
+    c.execute('UPDATE ledger SET is_active=? WHERE name=?', (active, target))
 
 def update(target, cells, globalScope, localScope, executions):
-#    localScope = {}# if localScope == None else localScope
+    '''
+    '''
     localdump = {}
     try:
         localdump = dill.dumps(localScope)
     except AttributeError:
         logging.debug('Dill pickling the local scope, yields an error')
-    c.execute('UPDATE ledger SET cells=?, global_scope=?, local_scope=?, executions=? WHERE name=?', (dill.dumps(cells), dill.dumps(globalScope), dill.dumps(localdump), executions, target))
+    c.execute('UPDATE ledger SET cells=?, global_scope=?, local_scope=?, executions=? WHERE name=?', \
+            (dill.dumps(cells), dill.dumps(globalScope), dill.dumps(localdump), executions, target))
