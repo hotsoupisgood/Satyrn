@@ -57,11 +57,8 @@ header {
 }
 .cell .maincode pre {
 	margin: 0;
-	white-space: normal;
 }
-.cell .maincode pre code {
-	padding: 0;
-}
+
 .bottom-enter,
 .bottom-leave-to {
 	visibility: hidden;

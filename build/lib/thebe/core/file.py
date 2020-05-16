@@ -38,7 +38,7 @@ def test_extension(targetLocation):
     '''
     '''
 
-    targetExtension=targetLocation.split('.')[1]
+    targetExtension=targetLocation.split('.')[-1]
     if targetExtension=='ipynb':
         return 'ipynb'
     elif targetExtension=='py':

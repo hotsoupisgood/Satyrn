@@ -6,7 +6,7 @@ def readme():
 
 setup(
         name='thebe',
-        version='0.0.3.4',
+        version='0.0.4.0',
         description='Automatically runs and displays python code in browser.',
         author_email='hairyhenry@gmail.com',
         url='https://github.com/hotsoupisgood/Satyrn',

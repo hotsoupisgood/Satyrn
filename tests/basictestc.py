@@ -1,12 +1,24 @@
+
+$$$$
+
 print('Hello world')
-import time
-time.sleep(5)
-x = 0
-####
-x = x+1
-time.sleep(2)
+S0=100.0    # spot stock price
+K=100.0     # strike
+T=1.0       # maturity 
+r=0.1       # risk free rate 
+sig=0.2     # diffusion coefficient or volatility
+$$$$m
 
-print(x+1)
+# Hello world
+Are 
+$$
+a, b \in \mathbb{R}, then applies (a+b)^{2} = a^{2} + ab + b^{2} 
+$$
 
-####
 
+$$$$
+import threading
+def runThread():
+    print('hello world')
+    time.sleep(2)
+print('hello world21')

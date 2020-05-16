@@ -10,6 +10,7 @@ import thebe.core.vim as vim
 import thebe.core.data as data
 import thebe.core.file as fm
 import thebe.core.constants as Constants
+import thebe.core.logger as Logger
 import tempfile, time, os, sys, webbrowser, logging, logging.config, json
 
 port = args.getPort()
@@ -22,7 +23,9 @@ app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, async_handlers = False)
 
 #Configure logging
-logging.basicConfig(filename = os.path.dirname(__file__)+'/logs/all.log', level = logging.INFO)
+logger = Logger.getLogger('sockets.log', __name__)
+logging.basicConfig(filename = os.path.dirname(__file__)+'/logs/all.log', level = logging.DEBUG)
+#logging.basicConfig(level = logging.INFO)
 #log = logging.getLogger('werkzeug')
 #log.setLevel(logging.ERROR)
 
@@ -52,7 +55,7 @@ Connect and disconnect events.
 '''
 @socketio.on('connect')
 def connect():
-    logging.info('Connected to client')
+    logger.info('Connected to client')
     #Show
     Update.checkUpdate(socketio, target_name, connected = True, isIpynb = is_ipynb, \
             GlobalScope = GlobalScope, LocalScope = LocalScope, Cells = Cells)
@@ -61,7 +64,7 @@ def connect():
 
 @socketio.on('disconnect')
 def disconnect():
-    logging.info('Client disconnected')
+    logger.info('Client disconnected')
 
 '''
 Ping back and forth from client to server.
@@ -69,25 +72,34 @@ Checks whether or not the file has been saved and running it when changed.
 '''
 @socketio.on('check if saved')
 def check():
-    ('Check if target updated...')
+    logger.info('Check if target updated...')
     Update.checkUpdate(socketio, target_name, isIpynb = is_ipynb, \
             GlobalScope = GlobalScope, LocalScope = LocalScope, Cells = Cells)
     socketio.emit('ping client')
+
+'''
+'''
+@socketio.on('run_all')
+def run_all():
+    Update.checkUpdate(socketio, target_name, isIpynb = is_ipynb, \
+            GlobalScope = GlobalScope, LocalScope = LocalScope, Cells = Cells,\
+            runAll = True)
 
 '''
 Run flask and socketio.
 '''
 def main():
     ledger=[]
-    def startFlask():
-        socketio.run(app, port=port, debug=False)
-#        webbrowser.open_new_tab(url)
-    try:
-        logging.info('Starting flask process...')
-        flask = Process(target = startFlask)
-        flask.start()
-    except KeyboardInterrupt:
-        logging.info("Terminating flask server.")
-        flask.terminate()
-        flask.join()
-        logging.info("Terminated flask server.")
+    socketio.run(app, port=port, debug=False)
+#    def startFlask():
+#        socketio.run(app, port=port, debug=False)
+##        webbrowser.open_new_tab(url)
+#    try:
+#        logging.info('Starting flask process...')
+#        flask = Process(target = startFlask)
+#        flask.start()
+#    except KeyboardInterrupt:
+#        logging.info("Terminating flask server.")
+#        flask.terminate()
+#        flask.join()
+#        logging.info("Terminated flask server.")
