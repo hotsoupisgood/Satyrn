@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from jupyter_client.manager import start_new_kernel
 from pygments.formatters import HtmlFormatter
 from flask import Flask, render_template, Response, g
 from flask_socketio import SocketIO, emit
@@ -12,6 +13,8 @@ import thebe.core.file as fm
 import thebe.core.constants as Constants
 import thebe.core.logger as Logger
 import tempfile, time, os, sys, webbrowser, logging, logging.config, json
+
+kernel_manager, jupyter_client = start_new_kernel()
 
 port = args.getPort()
 target_name = args.getFile()
@@ -58,7 +61,7 @@ def connect():
     logger.info('Connected to client')
     #Show
     Update.checkUpdate(socketio, target_name, connected = True, isIpynb = is_ipynb, \
-            GlobalScope = GlobalScope, LocalScope = LocalScope, Cells = Cells)
+            GlobalScope = GlobalScope, LocalScope = LocalScope, Cells = Cells, jc=jupyter_client)
     #Start pinging
     socketio.emit('ping client')
 
@@ -74,15 +77,16 @@ Checks whether or not the file has been saved and running it when changed.
 def check():
     logger.info('Check if target updated...')
     Update.checkUpdate(socketio, target_name, isIpynb = is_ipynb, \
-            GlobalScope = GlobalScope, LocalScope = LocalScope, Cells = Cells)
+            GlobalScope = GlobalScope, LocalScope = LocalScope, Cells = Cells, jc=jupyter_client)
     socketio.emit('ping client')
 
 '''
 '''
 @socketio.on('run_all')
 def run_all():
+    kernel_manager, jupyter_client = start_new_kernel()
     Update.checkUpdate(socketio, target_name, isIpynb = is_ipynb, \
-            GlobalScope = GlobalScope, LocalScope = LocalScope, Cells = Cells,\
+            GlobalScope = GlobalScope, LocalScope = LocalScope, Cells = Cells, jc=jupyter_client,\
             runAll = True)
 
 '''

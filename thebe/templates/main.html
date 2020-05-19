@@ -41,7 +41,7 @@ src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/MathJax.js?config=TeX-
 <div id = "logo">
 	Thebe
 </div>
-<button v-on:click = 'runAll'>&#x267A;</button>
+<button v-on:click = 'runAll' title = "Run all cells">&#x267A;</button>
 <transition-group name = "messages" tag = "div">
 	<div v-for = "(message, index) in messages" v-bind:key = "index">
 	<div class = "message" v-if = "index == messages.length-1">
@@ -53,10 +53,15 @@ src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/MathJax.js?config=TeX-
 <div class="cells">
 <div class="cell" v-for="(cell, index) in cells">
 	<div class="top">
-		<div class = "top-attribute">
-			[[ cell.execution_count ]]-
+		<div class = "top-attribute" v-if = "cell.cell_type === 'code'">
+			[[ cell.execution_count ]]
+			&nbsp;
 			[[ cell.last_changed ]]
-		<div class = "loader" v-if = "index == loading"></div>
+			&nbsp;
+			<div class = "loader" v-if = "index == loading"></div>
+		</div>
+		<div class = "top-attribute" v-if = "cell.cell_type === 'markdown'">
+			Markdown
 		</div>
 		<div class = "top-attribute">
 			[[ index ]]
@@ -67,19 +72,18 @@ src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/MathJax.js?config=TeX-
 		<div v-html="cell.source" v-if="cell.cell_type === 'markdown'"></div>
 	</div>
 	<transition name = "bottom">
-	<div class="bottom" v-if = "cell.outputs.length > 0">
-		<div class="termout">
-			<div class="outputs" v-for="output in cell.outputs">
+	<div class="bottom" v-if = "cell.cell_type === 'code' && cell.outputs.length > 0">
+		<div class="outputs">
+			<div class="output" v-for="output in cell.outputs">
 				<div class="stdout" v-if="output.output_type === 'execute_result'">
-					Standard Output:<br>
-					<div class="output" v-for="data in output['data']['text/plain']" v-html="data"></div>
+					<div v-for="data in output['data']['text/plain']" v-html="data"></div>
 				</div>
 				<div class="stderr" v-if="output.output_type === 'error'">
 					Standard Error:<br>
-					<div class="output" v-for="data in output['traceback']" v-html="data"></div>
+					<div v-for="data in output['traceback']" v-html="data"></div>
 				</div>
 				<div v-if="output.output_type === 'display_data'">
-					<img v-bind:src="'data:image/png;base64, ' + output['data']['image/png']" />
+					<img class="plot" v-bind:src="'data:image/png;base64, ' + output['data']['image/png']" />
 				</div>
 			</div>
 		</div>

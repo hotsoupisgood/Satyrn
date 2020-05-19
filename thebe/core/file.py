@@ -79,6 +79,14 @@ def removeTemp(tempFileName):
     os.remove(tempFileName)
 
 def getPrefix(fileName):
-    return fileName.split('.')[0]
+    '''
+    Get the file prefix
+    '''
+
+    # Doing this in a weird way to handle for situations where there are
+    # dots other than the one signifying extension.
+    splitName = fileName.split('.')
+    splitName.pop()
+    return '.'.join(splitName)
 
 

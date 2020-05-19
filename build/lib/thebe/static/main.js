@@ -69,6 +69,10 @@ document.addEventListener("DOMContentLoaded", function(){
 			}
 		}
 	})
+	socket.on('plot output', function(output) {
+		console.log('pushing outs')
+		vm.cells[vm.loading]['outputs'].push(output)
+	})
 	socket.on('show output', function(newOutput) {
 		for (var i in vm.cells){
 			out=newOutput.shift()

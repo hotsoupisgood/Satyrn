@@ -13,10 +13,10 @@ import thebe.core.constants as Constant
 import thebe.core.output as output 
 import thebe.core.logger as Logger
 import thebe.core.update as Update
-#from thebe.core.output import outputController 
+
 logger = Logger.getLogger('run.log', __name__)
 
-def runNewCells(socketio, cellsToRun, globalScope, localScope):
+def runNewCells(socketio, cellsToRun, globalScope, localScope, jc):
     '''
     Run each changed cell, returning the output.
     '''
@@ -31,7 +31,9 @@ def runNewCells(socketio, cellsToRun, globalScope, localScope):
             logger.info('Current working directory:\t%s'%(os.getcwd()))
             logger.info('\n------------------------\nRunning cell #%s\n-------------------------------\
                     \nWith code:\n%s'%(cellCount, cell['source']))
-            stdout, stderr, plotData = runWithExec(socketio, cell['source'], globalScope, localScope)
+#            stdout, stderr, plotData = runWithExec(socketio, cell['source'], globalScope, localScope)
+
+            stdout, stderr, plotData = jExecute(socketio, cell['source'], globalScope, localScope, jc)
 
             if stderr:
                 hasError = True
@@ -53,6 +55,68 @@ def runNewCells(socketio, cellsToRun, globalScope, localScope):
         cellOutput.append(cell)
 
     return cellOutput
+
+def jExecute(socketio, code, globalScope, localScope, jc):
+    '''
+    '''
+
+    code = ''.join(code)
+
+    # Execute the code
+    msg_id = jc.execute(code)
+
+    # Collect the response payload
+    # reply = jc.get_shell_msg(msg_id)
+
+    # Get the execution status
+    # When the execution state is "idle" it is complete
+    io_msg_content = jc.get_iopub_msg(timeout=1)['content']
+
+    # We're going to catch this here before we start polling
+    if 'execution_state' in io_msg_content and io_msg_content['execution_state'] == 'idle':
+        logger.debug('No output!')
+
+    # Initialize the temp variable
+    temp = {}
+
+    # Initialize outputs
+    stdout = ''
+    stderr = ''
+    plotData = ''
+
+    # Continue polling for execution to complete
+    # which is indicated by having an execution state of "idle"
+    while True:
+        # Save the last message content. This will hold the solution.
+        # The next one has the idle execution state indicating the execution
+        # is complete, but not the stdout output
+        temp = io_msg_content
+
+        # Check the message for various possibilities
+        if 'data' in temp: # Indicates completed operation
+            if 'image/png' in temp['data']:
+                plotData =  temp['data']['image/png']
+                socketio.emit('plot output', getPlotOutput(plotData))
+        if 'name' in temp and temp['name'] == "stdout": # indicates output
+            stdout = '%s\n%s' % (stdout, temp['text'])
+            logger.info('Standard output:\t%s'%(stdout,))
+            socketio.emit('output', stdout.split('\n'))
+        if 'traceback' in temp: # Indicates error
+            stderr = '%s\n%s' % (stderr, temp['evalue'])
+
+        # Poll the message
+#        if 'execution_state' in io_msg_content and io_msg_content['execution_state'] == 'idle':
+#            break
+        try:
+            logger.info('Retrieving message...')
+            io_msg_content = jc.get_iopub_msg()['content']
+            time.sleep(.1)
+            if 'execution_state' in io_msg_content and io_msg_content['execution_state'] == 'idle':
+                break
+        except queue.Empty:
+            break
+
+    return stdout, stderr, plotData
 
 def runWithExec(socketio, cellCode, globalScope, localScope):
     '''
@@ -140,6 +204,15 @@ def fillPlot(cell, plot):
         output = Constant.getDisplayOutput()
         output['data']['image/png'] = plot
         cell['outputs'].append(output)
+    return cell
+
+def getPlotOutput(plot):
+    '''
+    '''
+    output = Constant.getDisplayOutput()
+    output['data']['image/png'] = plot
+    return output
+
 
 def fillStdOut(cell, stdOut):
     '''

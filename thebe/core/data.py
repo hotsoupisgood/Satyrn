@@ -27,25 +27,14 @@ def update(oldCellList, fileContent, runAll=False):
 
         #Split source by line
         source = source.splitlines(True)
-        if source:
+
+        if validSource(source):
             # Get copy of cell initially populated
             cell = setChanged(oldCellList, sourceList, source)
 
             logger.info('Full source:\n\
                     ---------------\n\
                     %s'%(source,))
-
-            # Detect if cell is Markdown
-            if source[0] == 'm\n':
-                # Remove the markdown identifier
-                source.pop(0)
-                # Set cell as markdown
-                cell['cell_type'] = 'markdown'
-            else:
-                source.pop(0)
-
-            #Set sourceCode
-            cell['source'] = source
 
             # Populate outputs with an initial empty output
             # so we don't get empty list errors
@@ -95,10 +84,9 @@ def toThebe(ipynb):
                     \n-------------------------------\%s'%\
                     (output,))
     return output
-#    return Constants.CellDelimiter.join([''.join(cell['source']) for cell in ipynb['cells']])
     
 
-def setChanged(oldCellList, sourceList, cellSource):
+def setChanged(oldCellList, sourceList, source):
     '''
     If the source preexists, set new cell to old cell
     If not, set changed, and last changed time.
@@ -106,8 +94,20 @@ def setChanged(oldCellList, sourceList, cellSource):
 
     cell=copy.deepcopy(Constants.Cell)
 
+    # Detect if cell is Markdown
+    if source[0] == 'm\n':
+        # Remove the markdown identifier
+        source.pop(0)
+        # Set cell as markdown
+        cell['cell_type'] = 'markdown'
+    else:
+        source.pop(0)
+
+    #Set sourceCode
+    cell['source'] = source
+
     try:
-        x=sourceList.index(cellSource)
+        x=sourceList.index(source)
         cell=oldCellList[x]
 
     except ValueError:
@@ -117,6 +117,18 @@ def setChanged(oldCellList, sourceList, cellSource):
 
     return cell
 
-#Hash the string of code
 def hashSource(source):
+    '''
+    Hash the string of code
+    '''
     return md5(source.encode()).hexdigest()
+
+def validSource(source):
+    '''
+    Return false if source list is all Just new lines
+    '''
+    for s in source:
+        if s != '\n':
+            return True
+    return False
+

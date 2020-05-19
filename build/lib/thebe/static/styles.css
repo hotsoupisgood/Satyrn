@@ -21,6 +21,12 @@ header {
 	border-bottom: 1px solid lightgray;	
 	padding: 3px 15px;
 }
+.plot {
+	padding: 5px;
+	background: white;
+	border: 1px solid white;
+	border-radius: 3px;
+}
 #messages {
 	padding: 2px 10px;
 }
@@ -51,6 +57,7 @@ header {
 	padding: 4px;
 }
 .cell .top .top-attribute {
+	display: flex;
 }
 .cell .maincode {
 	padding: 3px;
@@ -75,16 +82,19 @@ header {
 	-webkit-transition-duration: 600ms;
 	transition-duration: 600ms;
 }
-.termout {
+.outputs {
 	display: flex;
+	flex-direction: column;
 	width: 95%;
-	flex-direction: row;
 	justify-content: space-between;
 	font-size: .7em;
 	padding: 8px;
 	overflow-wrap: break-word;
 }
-.cell .termout pre {
+.outputs .output {
+	
+}
+.cell .outputs .output pre {
 	background: lightgray;
 	margin: 4px 0px;
 }

@@ -8,7 +8,7 @@ import os, time, json, threading, queue
 logger = Logger.getLogger('update.log', __name__)
 
 def checkUpdate(socketio, fileLocation, connected=False, \
-        isIpynb=False, GlobalScope=None, LocalScope=None, Cells=None, runAll=False):
+        isIpynb=False, GlobalScope=None, LocalScope=None, Cells=None, runAll=False, jc=None):
     '''
     Combines isModified and update functions. 
     '''
@@ -25,7 +25,7 @@ def checkUpdate(socketio, fileLocation, connected=False, \
         if isActive:
             socketio.emit('flash')
         else:
-            thread = update(socketio, fileLocation, GlobalScope, LocalScope, Cells, isIpynb, runAll)
+            thread = update(socketio, fileLocation, GlobalScope, LocalScope, Cells, isIpynb, jc, runAll)
             time.sleep(.5)
 
     #If it's modified or if it's the first time it has run, update.
@@ -34,13 +34,13 @@ def checkUpdate(socketio, fileLocation, connected=False, \
             logger.info('flashing')
             socketio.emit('flash')
         else:
-            thread = update(socketio, fileLocation, GlobalScope, LocalScope, Cells, isIpynb)
+            thread = update(socketio, fileLocation, GlobalScope, LocalScope, Cells, isIpynb, jc)
             time.sleep(.5)
 
     elif connected==True:
         if not isActive:
-            if not GlobalScope:
-                thread = update(socketio, fileLocation, GlobalScope, LocalScope, Cells, isIpynb)
+            if not Cells:
+                thread = update(socketio, fileLocation, GlobalScope, LocalScope, Cells, isIpynb, jc)
             else: 
                 socketio.emit('show all', Html.convert(Cells))
         else:
@@ -51,7 +51,7 @@ def checkUpdate(socketio, fileLocation, connected=False, \
     time.sleep(.5)
 
 #Run code and send code and outputs to client
-def update(socketio, fileLocation, GlobalScope, LocalScope, Cells, isIpynb, runAll=False):
+def update(socketio, fileLocation, GlobalScope, LocalScope, Cells, isIpynb, jc, runAll=False):
     isActive = Database.setIsActive(fileLocation)
 
     '''
@@ -83,7 +83,7 @@ def update(socketio, fileLocation, GlobalScope, LocalScope, Cells, isIpynb, runA
         '''
         Run the newly changed cells and return their output.
         '''
-        Cells = Run.runNewCells(socketio, Cells, GlobalScope, LocalScope)
+        Cells = Run.runNewCells(socketio, Cells, GlobalScope, LocalScope, jc)
 
         '''
         Send output to client
@@ -142,13 +142,7 @@ def streamOutput(socketio, stream, isRunning):
         if not currentStream == oldStream:
             socketio.emit('output', currentStream.split('\n'))
             oldStream = currentStream
-#        currentStream = stream.getvalue()
-#        replacedStream = currentStream.replace(oldStream, '')
-#        logger.info('-------------------------------\nHere is the old stream:\t%s\nThis is the replaced stream:\t%s'%(oldStream, replacedStream))
-#        if replacedStream:
-#            socketio.emit('output', replacedStream)
-#            oldStream = currentStream
-        #Sleep the loop so it doesn't pollute the socket. The length is currently arbitrary.
+        # Sleep the loop so it doesn't pollute the socket. The length is currently arbitrary.
         time.sleep(.2)
 
 
