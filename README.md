@@ -1,5 +1,5 @@
 # Thebe
-<iframe src='https://gfycat.com/ifr/GrossVerifiableAnemone' frameborder='0' scrolling='no' allowfullscreen width='640' height='404'></iframe>
+![](<iframe src='https://gfycat.com/ifr/GrossVerifiableAnemone' frameborder='0' scrolling='no' allowfullscreen width='640' height='404'></iframe>)
 Thebe's purpose is to allow for the easy running of python scripts that contain graphs. This idea spawned out of the utility which I saw in Jupyter and my desire to run vim as my editor.  
 ** This program only works with matplotlib graphs.
 
