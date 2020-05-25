@@ -1,8 +1,11 @@
 # Thebe
 ![](https://thumbs.gfycat.com/GrossVerifiableAnemone-size_restricted.gif)  
 
-Thebe's purpose is to allow for the easy running of python scripts that contain graphs. This idea spawned out of the utility which I saw in Jupyter and my desire to run vim as my editor.  
-** This program only works with matplotlib graphs.
+Thebe is a python command line app. Its purpose is to let you run your code in cells like Jupyter but while using any editor. It does this by watching the cells for changes, and running them if it sees one.
+
+- So far it only is tested to run on Mac and Ubuntu
+- It probably has a metric dump truck full of bugs
+- And it only works with matplotlib graphs
 
 ## Installation
 ### Dependencies:
