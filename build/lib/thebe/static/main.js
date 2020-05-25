@@ -50,10 +50,14 @@ document.addEventListener("DOMContentLoaded", function(){
 		console.log('Disconnected to server');
 	});
 	socket.on('message', function(message) {
+		document.title = message
 		messages.push(message)
 	});
 	socket.on('loading', function(loading) {
 		vm.loading = loading
+	})
+	socket.on('stop loading', function() {
+		vm.loading = 'none'
 	})
 	socket.on('flash', function() {
 		messages.push('Cannot run new cells while old cells are still running...')
@@ -63,11 +67,12 @@ document.addEventListener("DOMContentLoaded", function(){
 	});
 	socket.on('output', function(output) {
 		console.log('pushing outs')
-		for (i = 0; i < vm.cells[vm.loading]['outputs'].length; i++) {
-			if (vm.cells[vm.loading]['outputs'][i]['output_type'] == 'execute_result'){
-				vm.cells[vm.loading]['outputs'][i]['data']['text/plain'] = output
-			}
-		}
+		vm.cells[vm.loading]['outputs'].push(output)
+//		for (i = 0; i < vm.cells[vm.loading]['outputs'].length; i++) {
+//			if (vm.cells[vm.loading]['outputs'][i]['output_type'] == 'execute_result'){
+//				vm.cells[vm.loading]['outputs'][i]['data']['text/plain'] = output
+//			}
+//		}
 	})
 	socket.on('plot output', function(output) {
 		console.log('pushing outs')

@@ -23,7 +23,20 @@ def update(oldCellList, fileContent, runAll=False):
     cellList = []
     sourceList = getSourceList(oldCellList)
 
+    # Ignore code that comes before the first delimiter
+    ignoreFirst = False
+    if not fileContent.startswith(Constants.CellDelimiter):
+        logger.info('Ignoring first...')
+        logger.info('---------------\n%s\n-------------'%(fileContent[0:10],))
+        ignoreFirst = True
+
     for cellCount, source in enumerate(fileContent.split(Constants.CellDelimiter)):
+
+        # Ignore the first source if a cell delimiter
+        # does not preceed it
+        if ignoreFirst:
+            ignoreFirst = False
+            continue
 
         #Split source by line
         source = source.splitlines(True)
@@ -32,19 +45,17 @@ def update(oldCellList, fileContent, runAll=False):
             # Get copy of cell initially populated
             cell = setChanged(oldCellList, sourceList, source)
 
-            logger.info('Full source:\n\
-                    ---------------\n\
-                    %s'%(source,))
-
-            # Populate outputs with an initial empty output
-            # so we don't get empty list errors
-            cell['outputs'] = [Constants.getExecuteOutput()]
+            # If outputs are empty, populate outputs
+            # with an initial empty output so we 
+            # don't get empty list errors
+            if not cell['outputs']:
+                cell['outputs'] = [Constants.getExecuteOutput()]
 
             # This activates if the user clicks the run all button
             if runAll:
-                cell['changed']=True
+                cell['changed'] = True
 
-            #Set execution counter if it exists
+            # Set execution counter if it exists
             try:
                 cell['execution_count'] = oldCellList[cellCount]['execution_count'] 
             except IndexError:
@@ -80,9 +91,9 @@ def toThebe(ipynb):
                     (Constants.CellDelimiter + '\n' + \
                     ''.join(cell['source']))\
                     ))
-            logger.info('ipynb conversion output:\
-                    \n-------------------------------\%s'%\
-                    (output,))
+#            logger.info('ipynb conversion output:\
+#                    \n-------------------------------\%s'%\
+#                    (output,))
     return output
     
 
@@ -101,14 +112,15 @@ def setChanged(oldCellList, sourceList, source):
         # Set cell as markdown
         cell['cell_type'] = 'markdown'
     else:
+        # Remove the new line after the delimiter
         source.pop(0)
 
     #Set sourceCode
     cell['source'] = source
 
     try:
-        x=sourceList.index(source)
-        cell=oldCellList[x]
+        x = sourceList.index(source)
+        cell = oldCellList[x]
 
     except ValueError:
         cell['execution_count']

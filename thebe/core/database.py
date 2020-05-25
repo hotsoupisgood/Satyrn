@@ -28,6 +28,7 @@ def getLedger(target):
     conn.close()
     if bool(fetched):
         r=fetched
+        logger.info('Fetched Cells:\n-------------------------------\n%s'%(r['cells'],))
         return r['cells'], r['global_scope'], r['local_scope']
     else:
         createLedger(target)
@@ -99,6 +100,7 @@ def update(target, cells, globalScope, localScope, executions):
         localdump = dill.dumps(localScope)
     except AttributeError:
         logger.debug('Dill pickling the local scope, yields an error')
+    logger.info('Before updating ledger with new cells:\n-------------------------------\n%s'%(cells,))
     c.execute('UPDATE ledger SET cells=?, global_scope=?, local_scope=?, executions=? WHERE name=?', \
             (dill.dumps(cells), dill.dumps(globalScope), dill.dumps(localdump), executions, target))
     conn.commit()

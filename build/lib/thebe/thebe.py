@@ -15,6 +15,7 @@ import thebe.core.logger as Logger
 import tempfile, time, os, sys, webbrowser, logging, logging.config, json
 
 kernel_manager, jupyter_client = start_new_kernel()
+rActive = False
 
 port = args.getPort()
 target_name = args.getFile()
@@ -84,10 +85,20 @@ def check():
 '''
 @socketio.on('run_all')
 def run_all():
-    kernel_manager, jupyter_client = start_new_kernel()
-    Update.checkUpdate(socketio, target_name, isIpynb = is_ipynb, \
-            GlobalScope = GlobalScope, LocalScope = LocalScope, Cells = Cells, jc=jupyter_client,\
-            runAll = True)
+    '''
+    Restart the kernel, and clear saved code.
+    '''
+    if not rActive:
+        rActive = True
+        # Restart the kernel after active is set
+        jm.restart_kernel()
+        message = jc.get_iopub_msg(timeout=1)['content']
+        message = jc.get_iopub_msg(timeout=1)['content']
+        logger.info('Restarting kernel')
+        Update.checkUpdate(socketio, target_name, isIpynb = is_ipynb, \
+                GlobalScope = GlobalScope, LocalScope = LocalScope, Cells = Cells, jc=jupyter_client,\
+                runAll = True)
+        rActive = False
 
 '''
 Run flask and socketio.
@@ -95,15 +106,3 @@ Run flask and socketio.
 def main():
     ledger=[]
     socketio.run(app, port=port, debug=False)
-#    def startFlask():
-#        socketio.run(app, port=port, debug=False)
-##        webbrowser.open_new_tab(url)
-#    try:
-#        logging.info('Starting flask process...')
-#        flask = Process(target = startFlask)
-#        flask.start()
-#    except KeyboardInterrupt:
-#        logging.info("Terminating flask server.")
-#        flask.terminate()
-#        flask.join()
-#        logging.info("Terminated flask server.")

@@ -2,7 +2,7 @@
 <script type="text/javaScript">
 	window.MathJax = {
     tex2jax: {
-      inlineMath: [ ['$','$'], ["\[","\]"] ],
+      inlineMath: [ ['$','$'], ["\[","\]"], ["\\(","\\)"] ],
        displayMath: [ ['$$','$$'], ["\\[","\\]"] ],
        processEnvironments: true,
       processEscapes: true
@@ -80,7 +80,7 @@ src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/MathJax.js?config=TeX-
 				</div>
 				<div class="stderr" v-if="output.output_type === 'error'">
 					Standard Error:<br>
-					<div v-for="data in output['traceback']" v-html="data"></div>
+					<div v-for="data in output['evalue']" v-html="data"></div>
 				</div>
 				<div v-if="output.output_type === 'display_data'">
 					<img class="plot" v-bind:src="'data:image/png;base64, ' + output['data']['image/png']" />

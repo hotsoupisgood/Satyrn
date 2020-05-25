@@ -6,22 +6,19 @@ def readme():
 
 setup(
         name='thebe',
-        version='0.0.4.0',
+        version='0.0.4.3',
         description='Automatically runs and displays python code in browser.',
         author_email='hairyhenry@gmail.com',
         url='https://github.com/hotsoupisgood/Satyrn',
         include_package_data=True,
-#        packages = ['thebe', 'thebe/templates', 'thebe/static', 'thebe/core', 'thebe/logs'],
         packages=find_packages(),
-#        package_data={
-#            'thebe':['thebe.py'], 'templates': ['*'], 'static': ['*'], 'core': ['*'], 'logs': ['all.log']
-#                },
-#        data_files = [('thebe', ['logs/*.log'])],
         install_requires=[
             'flask',
             'flask_socketio',
             'pygments',
-            'dill'
+            'dill',
+            'pypandoc',
+            'jupyter_client',
             ],
         entry_points={
             'console_scripts': [
