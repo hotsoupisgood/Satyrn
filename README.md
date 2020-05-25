@@ -5,24 +5,27 @@ Thebe's purpose is to allow for the easy running of python scripts that contain 
 
 ## Installation
 ### Dependencies:
-Install pandoc:
+#### Install pandoc:
 
-on Mac via brew:
+##### on Mac via brew:
+```
 brew install pandoc
+```
 
-for linux see pandoc.org/installing.html
+for linux see [pandoc.org](pandoc.org/installing.html)
 
-Install ipykernel:
+#### Install ipykernel:
 
 ```
 python3 -m pip install ipykernel
 python3 -m ipykernel install --user
 ```
-### Install  
+### Install thebe  
 
 Run: 	```pip install thebe``` 
 
 ## How to use
+
 Run: 
 ```
 thebe (File you want to run) (Port you want to display on)
