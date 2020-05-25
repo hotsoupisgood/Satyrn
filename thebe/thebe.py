@@ -84,7 +84,12 @@ def check():
 '''
 @socketio.on('run_all')
 def run_all():
-    kernel_manager, jupyter_client = start_new_kernel()
+    '''
+    Restart the kernel, and clear saved code.
+    '''
+    kernel_manager.restart_kernel()
+    message = jupyter_client.get_iopub_msg(timeout=1)['content']
+    logger.info('Restarting kernel')
     Update.checkUpdate(socketio, target_name, isIpynb = is_ipynb, \
             GlobalScope = GlobalScope, LocalScope = LocalScope, Cells = Cells, jc=jupyter_client,\
             runAll = True)

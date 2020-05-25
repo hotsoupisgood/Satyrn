@@ -1,16 +1,17 @@
 import thebe.core.database as Database
 import thebe.core.run as Run
+import thebe.core.file as File
 import thebe.core.html as Html
 import thebe.core.data as data
 import thebe.core.constants as Constants 
 import thebe.core.logger as Logger
-import os, time, json, threading, queue
+import os, time, json, threading, queue, copy
+
 logger = Logger.getLogger('update.log', __name__)
 
 def checkUpdate(socketio, fileLocation, connected=False, \
         isIpynb=False, GlobalScope=None, LocalScope=None, Cells=None, runAll=False, jc=None):
     '''
-    Combines isModified and update functions. 
     '''
     
     '''
@@ -20,11 +21,16 @@ def checkUpdate(socketio, fileLocation, connected=False, \
     Cells, iGlobalScope, iLocalScope  = Database.getLedger(fileLocation)
     isActive = Database.getIsActive(fileLocation)
 
+    if runAll:
+        Cells = clearOutputs(Cells)
+
     #If the run all event is triggered
     if runAll:
+        logger.info('Run All Has Been Triggered!')
         if isActive:
             socketio.emit('flash')
         else:
+            Cells = []
             thread = update(socketio, fileLocation, GlobalScope, LocalScope, Cells, isIpynb, jc, runAll)
             time.sleep(.5)
 
@@ -77,31 +83,25 @@ def update(socketio, fileLocation, GlobalScope, LocalScope, Cells, isIpynb, jc, 
     Send a list of the cells that will run to the
     client so it can show what is loading.
     '''
-#    socketio.emit('show loading', htmlAllCells)
-
     def runThread(Cells, GlobalScope, LocalScope):
         '''
         Run the newly changed cells and return their output.
         '''
+        logger.info('------------------\nOutput before update\n-------------------------------\n%s'%([cell['outputs'] for cell in Cells],))
         Cells = Run.runNewCells(socketio, Cells, GlobalScope, LocalScope, jc)
-
-        '''
-        Send output to client
-        '''
-        #socketio.emit('show output', output)
+        logger.info('------------------\nOutput after update\n-------------------------------\n%s'%([cell['outputs'] for cell in Cells],))
         executions = Database.getExecutions(fileLocation)
         executions += 1
         logger.info('The number of code executions is %d' % executions)
-        #logger.info('---------------\npre-Html Cells\n---------------\n%s\n---------------\nHtml Cells\n---------------\n%s'%(Cells, Html.convert(Cells)))
-        socketio.emit('show all', Html.convert(Cells))
-
+#        socketio.emit('show all', Html.convert(Cells))
+        
         '''
         Update the database with the fresh code.
+        And outputs.
         '''
         Database.setActive(fileLocation, False)
         Database.update(fileLocation, Cells, GlobalScope, LocalScope, executions)
-        if isIpynb:
-            updateIpynb(fileLocation, Cells)
+        updateIpynb(fileLocation, Cells)
     t = threading.Thread(target = runThread, args = (Cells, GlobalScope, LocalScope))
     t.daemon = True
     t.start()
@@ -111,10 +111,29 @@ def updateIpynb(fileLocation, Cells):
     '''
     Write the new changes to the ipynb file.
     '''
-    with open(fileLocation.split('.')[0]+'.ipynb', 'w') as f:
+    cCells = copy.deepcopy(Cells)
+
+    # Remove extra attributes created by thebe.
+    sanitize(cCells)
+    
+
+    # Save cells into a ".ipynb" file
+    with open(File.getPrefix(fileLocation)+'.ipynb', 'w') as f:
+        # Get the jupyter cell list wrapper
         ipynb = Constants.getIpynb()
-        ipynb['cells'] = Cells
-        json.dump(ipynb, f)
+        # Wrap cells
+        ipynb['cells'] = cCells
+        # Overwrite old ipynb file
+        json.dump(ipynb, f, indent=True)
+
+def sanitize(Cells):
+    '''
+    Remove the extra attributes that thebe uses,
+    that Jupyter does not
+    '''
+    for i, cell in enumerate(Cells):
+        del Cells[i]['execution_count']
+        del Cells[i]['changed']
 
 def isModified(fileLocation, x=.3):
     '''
@@ -145,4 +164,10 @@ def streamOutput(socketio, stream, isRunning):
         # Sleep the loop so it doesn't pollute the socket. The length is currently arbitrary.
         time.sleep(.2)
 
-
+def clearOutputs(Cells):
+    '''
+    Clearly outputs and return the new cells
+    '''
+    for cell in Cells:
+        cell['outputs'] = []
+    return Cells

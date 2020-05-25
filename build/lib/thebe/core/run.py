@@ -1,18 +1,11 @@
-from itertools import zip_longest
-from multiprocessing import Process
 import time, sys, datetime, glob, re, sys, time, os, copy, logging, threading, queue
-from hashlib import md5
+from copy import deepcopy
 from io import StringIO
-from subprocess import Popen, PIPE
-from flask import url_for
-from pygments import highlight
-from pygments.lexers import BashLexer, PythonLexer
-from pygments.formatters import HtmlFormatter
-from flask_socketio import emit, SocketIO
 import thebe.core.constants as Constant
 import thebe.core.output as output 
 import thebe.core.logger as Logger
 import thebe.core.update as Update
+import thebe.core.html as Html
 
 logger = Logger.getLogger('run.log', __name__)
 
@@ -21,40 +14,47 @@ def runNewCells(socketio, cellsToRun, globalScope, localScope, jc):
     Run each changed cell, returning the output.
     '''
 
-    cellOutput = []
-    hasError = False
+    # Append cells containing updated output to this
+    newCells = []
+
+    # Toggle to true when the users code produces an
+    # error so code execution can stop
+    kill = False
+
     for cellCount, cell in enumerate(cellsToRun):
-        #Keep the master list updated
-        if cell['changed'] and cell['cell_type'] != 'markdown' and not hasError:
+
+        # Run changed code if it is not markdown
+        # and no prior cell has triggered an error
+        if cell['changed']:
             socketio.emit('message', 'Running cell #%s...'%(cellCount))
             socketio.emit('loading', cellCount)
-            logger.info('Current working directory:\t%s'%(os.getcwd()))
-            logger.info('\n------------------------\nRunning cell #%s\n-------------------------------\
-                    \nWith code:\n%s'%(cellCount, cell['source']))
-#            stdout, stderr, plotData = runWithExec(socketio, cell['source'], globalScope, localScope)
+            if cell['cell_type'] != 'markdown' and not kill:
+                logger.info('\n------------------------\nRunning cell #%s\nIn directory: %s\nWith code:\n%s\n-------------------------------'%(cellCount, os.getcwd(), cell['source']))
 
-            stdout, stderr, plotData = jExecute(socketio, cell['source'], globalScope, localScope, jc)
+                # Execute the code from the cell, stream 
+                # outputs using socketio, and return output
+                outputs = jExecute(socketio, cell['source'], globalScope, localScope, jc)
 
-            if stderr:
-                hasError = True
+                # Prevent subsequent execution of code
+                # if in error was found
+                if hasError(outputs):
+                    kill = True
 
-            clearOutputs(cell)
+                # Add output data to cell
+                cell['outputs'] = outputs
 
-            fillPlot(cell, plotData)
-            fillStdOut(cell, stdout)
-            fillErr(cell, stderr)
+                # How does ipython do this?
+                cell['changed'] = False
+                cell['execution_count'] = cell['execution_count'] + 1
+                logger.info('exe co: %s'%(cell['execution_count'],))
 
-            # How does ipython do this?
-            cell['changed']=False
-            cell['execution_count'] = cell['execution_count'] + 1
-            logger.info('exe co: %s'%(cell['execution_count'],))
+        # Append run cell the new cell list
+        newCells.append(cell)
 
+    # Stop the front end loading
+    socketio.emit('stop loading')
 
-#            logger.debug('Cell source, in output class:\t%s\n'%(cell['source']))
-
-        cellOutput.append(cell)
-
-    return cellOutput
+    return newCells
 
 def jExecute(socketio, code, globalScope, localScope, jc):
     '''
@@ -80,9 +80,7 @@ def jExecute(socketio, code, globalScope, localScope, jc):
     temp = {}
 
     # Initialize outputs
-    stdout = ''
-    stderr = ''
-    plotData = ''
+    outputs = []
 
     # Continue polling for execution to complete
     # which is indicated by having an execution state of "idle"
@@ -96,27 +94,110 @@ def jExecute(socketio, code, globalScope, localScope, jc):
         if 'data' in temp: # Indicates completed operation
             if 'image/png' in temp['data']:
                 plotData =  temp['data']['image/png']
-                socketio.emit('plot output', getPlotOutput(plotData))
+                output = getPlotOutput(plotData)
+                outputs.append(output)
+
+                socketio.emit('output', output)
+
         if 'name' in temp and temp['name'] == "stdout": # indicates output
-            stdout = '%s\n%s' % (stdout, temp['text'])
-            logger.info('Standard output:\t%s'%(stdout,))
-            socketio.emit('output', stdout.split('\n'))
-        if 'traceback' in temp: # Indicates error
-            stderr = '%s\n%s' % (stderr, temp['evalue'])
+            # Create output for server use
+            output = getStdOut(temp['text'])
+            outputs.append(output)
+
+            # Send HTML output for immediate front end use
+            htmlOutput = deepcopy(output)
+            htmlOutput['data']['text/plain'] = [Html.convertText(text, ttype = 'bash') for text in htmlOutput['data']['text/plain']]
+            socketio.emit('output', htmlOutput)
+
+        if 'evalue' in temp: # Indicates error
+
+            # Create output for server use
+            output = getErr(temp['evalue'])
+            outputs.append(output)
+
+            # Send HTML output for immediate front end use
+            htmlOutput = deepcopy(output)
+            htmlOutput['evalue'] = [Html.convertText(text, ttype = 'bash') for text in htmlOutput['evalue']]
+            socketio.emit('output', htmlOutput)
+            
+            # If there is an error than it is pointless 
+            # to keep on running code
+            break
 
         # Poll the message
-#        if 'execution_state' in io_msg_content and io_msg_content['execution_state'] == 'idle':
-#            break
         try:
             logger.info('Retrieving message...')
             io_msg_content = jc.get_iopub_msg()['content']
             time.sleep(.1)
+
             if 'execution_state' in io_msg_content and io_msg_content['execution_state'] == 'idle':
                 break
+
         except queue.Empty:
             break
 
-    return stdout, stderr, plotData
+    return outputs
+
+def hasError(outputs):
+    '''
+    If an error cell exists in outputs
+    return true
+    '''
+    for output in outputs:
+        if 'evalue' in output:
+            return True
+    return False
+
+def clearOutputs(cell):
+    '''
+    Replace list of outputs with an empty one.
+    '''
+    cell['outputs'] = []
+
+def fillPlot(cell, plot):
+    '''
+    If an image exists in the plot variable, create and return a plot cell.
+    '''
+    if plot:
+        output = Constant.getDisplayOutput()
+        output['data']['image/png'] = plot
+        cell['outputs'].append(output)
+    return cell
+
+def getPlotOutput(plot):
+    '''
+    '''
+    output = Constant.getDisplayOutput()
+    output['data']['image/png'] = plot
+    return output
+
+def getStdOut(stdOut):
+    output = Constant.getExecuteOutput()
+    output['data']['text/plain'] = stdOut.splitlines(True)
+    return output
+
+def getErr(err):
+    output = Constant.getErrorOutput()
+    output['evalue'] = err.splitlines(True)
+    return output
+
+def fillStdOut(cell, stdOut):
+    '''
+    If an output exists in the stdOut variable append new output to cell reference.
+    '''
+    if stdOut:
+        output = Constant.getExecuteOutput()
+        output['data']['text/plain'] = stdOut.splitlines(True)
+        cell['outputs'].append(output)
+
+def fillErr(cell, err):
+    '''
+    If an output exists in the err variable, create and return a err cell.
+    '''
+    if err:
+        output = Constant.getErrorOutput()
+        output['evalue'] = err.splitlines(True)
+        cell['outputs'].append(output)
 
 def runWithExec(socketio, cellCode, globalScope, localScope):
     '''
@@ -189,46 +270,3 @@ def getPlotData(globalScope, localScope):
     if stdout==Constant.EmptyGraph:
         stdout=''
     return stdout
-
-def clearOutputs(cell):
-    '''
-    Replace list of outputs with an empty one.
-    '''
-    cell['outputs'] = []
-
-def fillPlot(cell, plot):
-    '''
-    If an image exists in the plot variable, create and return a plot cell.
-    '''
-    if plot:
-        output = Constant.getDisplayOutput()
-        output['data']['image/png'] = plot
-        cell['outputs'].append(output)
-    return cell
-
-def getPlotOutput(plot):
-    '''
-    '''
-    output = Constant.getDisplayOutput()
-    output['data']['image/png'] = plot
-    return output
-
-
-def fillStdOut(cell, stdOut):
-    '''
-    If an output exists in the stdOut variable append new output to cell reference.
-    '''
-    if stdOut:
-        output = Constant.getExecuteOutput()
-        output['data']['text/plain'] = stdOut.splitlines(True)
-        cell['outputs'].append(output)
-
-def fillErr(cell, err):
-    '''
-    If an output exists in the err variable, create and return a err cell.
-    '''
-    if err:
-        output = Constant.getErrorOutput()
-        output['traceback'] = err.splitlines(True)
-        cell['outputs'].append(output)
-
