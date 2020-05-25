@@ -1,5 +1,5 @@
 # Thebe
-![](https://thumbs.gfycat.com/GrossVerifiableAnemone-mobile.mp4)
+![](https://thumbs.gfycat.com/GrossVerifiableAnemone-size_restricted.gif)
 Thebe's purpose is to allow for the easy running of python scripts that contain graphs. This idea spawned out of the utility which I saw in Jupyter and my desire to run vim as my editor.  
 ** This program only works with matplotlib graphs.
 
