@@ -13,7 +13,7 @@ Thebe's purpose is to allow for the easy running of python scripts that contain 
 brew install pandoc
 ```
 
-for linux see [pandoc.org](pandoc.org/installing.html)
+for linux see [pandoc.org](https://pandoc.org/installing.html)
 
 #### Install ipykernel:
 
