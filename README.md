@@ -1,29 +1,35 @@
 # Thebe
-![2020-5-25](https://gfycat.com/ifr/GrossVerifiableAnemone)
+![](https://thumbs.gfycat.com/GrossVerifiableAnemone-size_restricted.gif)  
 
-Thebe's purpose is to allow for the easy running of python scripts that contain graphs. This idea spawned out of the utility which I saw in Jupyter and my desire to run vim as my editor.  
-** This program only works with matplotlib graphs.
+Thebe is a python command line app. Its purpose is to let you run your code in cells like Jupyter but while using any editor. It does this by watching the cells for changes, and running them if it sees one.
+
+- So far it only is tested to run on Mac and Ubuntu
+- It probably has a metric dump truck full of bugs
+- And it only works with matplotlib graphs
 
 ## Installation
 ### Dependencies:
-Install pandoc:
+#### Install pandoc:
 
-on Mac via brew:
+##### on Mac via brew:
+```
 brew install pandoc
+```
 
-for linux see pandoc.org/installing.html
+for linux see [pandoc.org](https://pandoc.org/installing.html#linux)
 
-Install ipykernel:
+#### Install ipykernel:
 
 ```
 python3 -m pip install ipykernel
 python3 -m ipykernel install --user
 ```
-### Install  
+### Install thebe  
 
 Run: 	```pip install thebe``` 
 
 ## How to use
+
 Run: 
 ```
 thebe (File you want to run) (Port you want to display on)
