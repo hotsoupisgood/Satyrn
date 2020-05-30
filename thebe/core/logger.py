@@ -14,6 +14,7 @@ def getLogger(fileLoc, name):
 
     logger.addHandler(file_handler)
     logger.addHandler(streamHandler)
+    logging.StreamHandler(stream=None)
 
     return logger
 

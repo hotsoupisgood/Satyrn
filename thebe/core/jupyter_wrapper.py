@@ -52,48 +52,79 @@ class jupyter_client_wrapper:
         #self.Cells = Database.getCells(self.fileLocation)
 
         if update == 'changed':
-            self.mess_logger.info('executing with changed argument')
             self._execute_changed()
+
         elif update == 'all':
             self._execute_all()
+
         elif update == 'connected':
-            self.mess_logger.info('executing with connected argument')
             self._execute_connected()
+
         else:
             pass
 
         time.sleep(.5)
-
     '''
     -------------------------------
     Execution pre-preprocessing - Helpers
     -------------------------------
     '''
-
     def _execute_changed(self):
-        if self.isActive and self._isModified():
-            self.logger.info('flashing')
-            self.socketio.emit('flash')
-        else:
-            self.isActive = True
-            self._execute(self)
-
-    def _execute_all(self):
-        self.logger.info('Run All Has Been Triggered!')
         if self.isActive:
             self.socketio.emit('flash')
         else:
+            if self._isModified():
+                self.status_logger.info('Execute changed...')
+                self.isActive = True
+                self._execute(update = 'changed')
+                self.isActive = False
+                self.status_logger.info('Finished...')
+
+    def _execute_all(self):
+        if self.isActive:
+            self.socketio.emit('flash')
+        else:
+            self.status_logger.info('Execute all...')
             self.isActive = True
             self.Cells = []
-            self._execute(self, runAll)
+            self._execute(update = 'all')
+            self.isActive = False
+            self.status_logger.info('Finished...')
 
     def _execute_connected(self):
         if not self.Cells and not self.isActive:
+            self.status_logger.info('Execute connected...')
             self.isActive = True
-            self._execute(self)
+            self._execute(update = 'connected')
+            self.isActive = False
+            self.status_logger.info('Finished...')
         else: 
             self.socketio.emit('show all', self._convert())
         time.sleep(.5)
+
+    def _restart_kernel(self):
+        self.status_logger.info('Restarting kernel...')
+        kernel_manager.restart_kernel()
+        while True:
+            try:
+                io_msg_content = self.jupyter_client.get_iopub_msg()['content']
+                time.sleep(.01)
+
+            except queue.Empty:
+                break
+
+    def _isModified(self, x=.3):
+        '''
+        Return true if the target file has been modified in the past x amount of time
+        '''
+
+        lastModified=os.path.getmtime(self.fileLocation)
+        timeSinceModified=int(time.time()-lastModified)
+        if timeSinceModified<=x:
+            return True
+        else:
+            return False
+
 
     '''
     -------------------------------
@@ -290,11 +321,11 @@ class jupyter_client_wrapper:
             if 'evalue' in temp: # Indicates error
 
                 # Create output for server use
-                output = getErr(temp['evalue'])
+                output = self._getErr(temp['evalue'])
                 outputs.append(output)
 
                 # Send HTML output for immediate front end use
-                htmlOutput = deepcopy(output)
+                htmlOutput = copy.deepcopy(output)
                 htmlOutput['evalue'] = [Html.convertText(text, ttype = 'bash') for text in htmlOutput['evalue']]
                 self.socketio.emit('output', htmlOutput)
                 
@@ -353,7 +384,7 @@ class jupyter_client_wrapper:
         output['data']['text/plain'] = stdOut.splitlines(True)
         return output
 
-    def _getErr(err):
+    def _getErr(self, err):
         output = Constant.getErrorOutput()
         output['evalue'] = err.splitlines(True)
         return output
@@ -489,13 +520,12 @@ class jupyter_client_wrapper:
     '''
 
     def _convert(self):
-        self.status_logger.info('Inside update...')
         '''
         Return a deep copy of cellList with code replaced with html-ized code
         '''
 
         # Deep copy cells so the original is not converted to HTML
-        tempCells=copy.deepcopy(self.Cells)
+        tempCells = copy.deepcopy(self.Cells)
 
 
         for cell in tempCells:

@@ -25,11 +25,12 @@ jupyter = jupyter_client_wrapper(input_filename)
 jupyter.setSocket(socketio)
 
 #Configure logging
+root = logging.getLogger()
+handler = logging.StreamHandler(None)
+root.addHandler(handler)
 logger = Logger.getLogger('sockets.log', __name__)
-#logging.basicConfig(filename = os.path.dirname(__file__)+'/logs/all.log', level = logging.DEBUG)
+logging.StreamHandler(stream=None)
 #logging.basicConfig(level = logging.INFO)
-#log = logging.getLogger('werkzeug')
-#log.setLevel(logging.ERROR)
 
 '''
 Set some headers and get and send css for all of the HtmlFormatter components.
@@ -51,10 +52,8 @@ def connect():
     logger.info('Connected to client')
     #Show
     jupyter.execute(update = 'connected')
-#    Update.checkUpdate(socketio, target_name, connected = True, isIpynb = is_ipynb, \
-#            GlobalScope = GlobalScope, LocalScope = LocalScope, Cells = Cells, jc=jupyter_client)
     #Start pinging
-#    socketio.emit('ping client')
+    socketio.emit('ping client')
 
 @socketio.on('disconnect')
 def disconnect():
@@ -67,8 +66,7 @@ Checks whether or not the file has been saved and running it when changed.
 @socketio.on('check if saved')
 def check():
     logger.info('Check if target updated...')
-    Update.checkUpdate(socketio, target_name, isIpynb = is_ipynb, \
-            GlobalScope = GlobalScope, LocalScope = LocalScope, Cells = Cells, jc=jupyter_client)
+    jupyter.execute(update = 'changed')
     socketio.emit('ping client')
 
 '''
@@ -79,13 +77,7 @@ def run_all():
     Restart the kernel, and clear saved code.
     '''
     # Restart the kernel after active is set
-    kernel_manager.restart_kernel()
-    message = jupyter_client.get_iopub_msg(timeout=1)['content']
-    message = jupyter_client.get_iopub_msg(timeout=1)['content']
-    logger.info('Restarting kernel')
-    Update.checkUpdate(socketio, target_name, isIpynb = is_ipynb, \
-            GlobalScope = GlobalScope, LocalScope = LocalScope, Cells = Cells, jc=jupyter_client,\
-            runAll = True)
+    jupyter.execute(update = 'all')
 
 '''
 Run flask and socketio.
