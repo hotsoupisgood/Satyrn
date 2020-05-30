@@ -7,17 +7,12 @@ from flask_socketio import SocketIO, emit
 from multiprocessing import Process
 import thebe.core.update as Update
 import thebe.core.args as args
-import thebe.core.vim as vim
-import thebe.core.data as data
-import thebe.core.file as fm
-import thebe.core.constants as Constants
 import thebe.core.logger as Logger
+from thebe.core.jupyter_wrapper import jupyter_client_wrapper
 import tempfile, time, os, sys, webbrowser, logging, logging.config, json
 
-kernel_manager, jupyter_client = start_new_kernel()
-
 port = args.getPort()
-target_name = args.getFile()
+input_filename = args.getFile()
 
 #Initialize flask
 app = Flask(__name__)
@@ -25,21 +20,16 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, async_handlers = False)
 
+# Set up the execution engine
+jupyter = jupyter_client_wrapper(input_filename)
+jupyter.setSocket(socketio)
+
 #Configure logging
 logger = Logger.getLogger('sockets.log', __name__)
-logging.basicConfig(filename = os.path.dirname(__file__)+'/logs/all.log', level = logging.DEBUG)
+#logging.basicConfig(filename = os.path.dirname(__file__)+'/logs/all.log', level = logging.DEBUG)
 #logging.basicConfig(level = logging.INFO)
 #log = logging.getLogger('werkzeug')
 #log.setLevel(logging.ERROR)
-
-#Determine what kind of file working with
-target_name, is_ipynb = fm.setup(target_name)
-
-#Initialize some variables
-isActive = False
-Cells = []#Constants.getIpynb()
-LocalScope = {}
-GlobalScope = {}
 
 '''
 Set some headers and get and send css for all of the HtmlFormatter components.
@@ -60,10 +50,11 @@ Connect and disconnect events.
 def connect():
     logger.info('Connected to client')
     #Show
-    Update.checkUpdate(socketio, target_name, connected = True, isIpynb = is_ipynb, \
-            GlobalScope = GlobalScope, LocalScope = LocalScope, Cells = Cells, jc=jupyter_client)
+    jupyter.execute(update = 'connected')
+#    Update.checkUpdate(socketio, target_name, connected = True, isIpynb = is_ipynb, \
+#            GlobalScope = GlobalScope, LocalScope = LocalScope, Cells = Cells, jc=jupyter_client)
     #Start pinging
-    socketio.emit('ping client')
+#    socketio.emit('ping client')
 
 @socketio.on('disconnect')
 def disconnect():
@@ -88,9 +79,9 @@ def run_all():
     Restart the kernel, and clear saved code.
     '''
     # Restart the kernel after active is set
-    jm.restart_kernel()
-    message = jc.get_iopub_msg(timeout=1)['content']
-    message = jc.get_iopub_msg(timeout=1)['content']
+    kernel_manager.restart_kernel()
+    message = jupyter_client.get_iopub_msg(timeout=1)['content']
+    message = jupyter_client.get_iopub_msg(timeout=1)['content']
     logger.info('Restarting kernel')
     Update.checkUpdate(socketio, target_name, isIpynb = is_ipynb, \
             GlobalScope = GlobalScope, LocalScope = LocalScope, Cells = Cells, jc=jupyter_client,\
