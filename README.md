@@ -1,4 +1,4 @@
-# Thebe
+# Thebe (WIP)
 ![](https://thumbs.gfycat.com/GrossVerifiableAnemone-size_restricted.gif)  
 
 Thebe is a python command line app. Its purpose is to let you run your code in cells like Jupyter but while using any editor. It does this by watching the cells for changes, and running them if it sees one.
