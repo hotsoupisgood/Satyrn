@@ -1,10 +1,15 @@
 $$$$
+
 S0=100.0    # spot stock price
 K=100.0     # strike
-r = 1
+r = 20
 $$$$m
-# Hello world
+# Hello world more more
 $$$$
+r += 1
+print(r+1)
+$$$$
+
 print('hello world21')
 $$$$m
 # This is a test this is a test
@@ -13,4 +18,4 @@ $$$$
 from matplotlib import pyplot as plt
 import time
 $$$$
-plt.plot(range(10))
+plt.plot(range(r))

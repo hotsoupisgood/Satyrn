@@ -65,7 +65,6 @@ Checks whether or not the file has been saved and running it when changed.
 '''
 @socketio.on('check if saved')
 def check():
-    logger.info('Check if target updated...')
     jupyter.execute(update = 'changed')
     socketio.emit('ping client')
 
@@ -78,6 +77,13 @@ def run_all():
     '''
     # Restart the kernel after active is set
     jupyter.execute(update = 'all')
+@socketio.on('run cell')
+def run_all(index):
+    '''
+    Restart the kernel, and clear saved code.
+    '''
+    # Restart the kernel after active is set
+    jupyter.execute(update = [index])
 
 '''
 Run flask and socketio.

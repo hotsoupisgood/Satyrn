@@ -55,6 +55,8 @@ src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/MathJax.js?config=TeX-
 <div class="cell" v-for="(cell, index) in cells">
 	<div class="top">
 		<div class = "top-attribute" v-if = "cell.cell_type === 'code'">
+			<button v-on:click = 'run_cell(index)' title = "Run cell">&#9654;</button>
+			&nbsp;
 			[[ cell.execution_count ]]
 			&nbsp;
 			[[ cell.last_changed ]]

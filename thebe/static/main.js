@@ -25,6 +25,9 @@ document.addEventListener("DOMContentLoaded", function(){
 			runAll: function (event) {
 				socket.emit('run_all')
 			},
+			run_cell: function (id) {
+				socket.emit('run cell', id)
+			},
 			reRender() {
 				// Re render the latex under certain conditions
 				if (window.MathJax && dataAdded) {
@@ -68,11 +71,6 @@ document.addEventListener("DOMContentLoaded", function(){
 	socket.on('output', function(output) {
 		console.log('pushing outs')
 		vm.cells[vm.loading]['outputs'].push(output)
-//		for (i = 0; i < vm.cells[vm.loading]['outputs'].length; i++) {
-//			if (vm.cells[vm.loading]['outputs'][i]['output_type'] == 'execute_result'){
-//				vm.cells[vm.loading]['outputs'][i]['data']['text/plain'] = output
-//			}
-//		}
 	})
 	socket.on('plot output', function(output) {
 		console.log('pushing outs')

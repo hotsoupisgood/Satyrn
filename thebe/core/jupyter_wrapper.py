@@ -13,7 +13,8 @@ import pypandoc, time, sys, datetime, glob, re, sys, time, os, copy, logging, th
 class jupyter_client_wrapper:
     def __init__(self, fileName):
         # Setting up self.loggers
-        self.logger = Logger.getLogger('update.log', 'main')
+        self.lUpdate = Logger.getLogger('update.log', 'update')
+        self.logger = Logger.getLogger('main.log', 'main')
         self.mess_logger = Logger.getLogger('mess.log', 'mess')
         self.status_logger = Logger.getLogger('status.log', 'status')
         self.execute_logger = Logger.getLogger('execute.log', 'execute')
@@ -24,7 +25,7 @@ class jupyter_client_wrapper:
         self.fileLocation, is_ipynb = File.setup(fileName)
 
         # Initialize some variables
-        self.isActive = False
+#        self.isActive = False
         self.executionThread = None
         self.Cells = []
         self.executions = 0
@@ -50,18 +51,23 @@ class jupyter_client_wrapper:
 
     def execute(self, update = 'changed'):
         #self.Cells = Database.getCells(self.fileLocation)
-
-        if update == 'changed':
-            self._execute_changed()
-
-        elif update == 'all':
-            self._execute_all()
-
-        elif update == 'connected':
-            self._execute_connected()
-
+        if self._isActive():
+            self.socketio.emit('flash')
         else:
-            pass
+            if update == 'changed':
+                self._execute_changed()
+
+            elif update == 'all':
+                self._execute_all()
+
+            elif update == 'connected':
+                self._execute_connected()
+
+            elif type(update) == list:
+                self._execute_cell(update)
+
+            else:
+                pass
 
         time.sleep(.5)
     '''
@@ -69,45 +75,42 @@ class jupyter_client_wrapper:
     Execution pre-preprocessing - Helpers
     -------------------------------
     '''
+    def _execute_cell(self, index):
+#        self.isActive = True
+        self._execute(update = index)
+#        self.isActive = False
+
     def _execute_changed(self):
-        if self.isActive:
-            self.socketio.emit('flash')
-        else:
-            if self._isModified():
-                self.status_logger.info('Execute changed...')
-                self.isActive = True
-                self._execute(update = 'changed')
-                self.isActive = False
-                self.status_logger.info('Finished...')
+        if self._isModified():
+            self.status_logger.info('Execute changed...')
+#            self.isActive = True
+            self._execute(update = 'changed')
+#            self.isActive = False
+            self.status_logger.info('Finished...')
 
     def _execute_all(self):
-        if self.isActive:
-            self.socketio.emit('flash')
-        else:
-            self.status_logger.info('Execute all...')
-            self.isActive = True
-            self.Cells = []
-            self._execute(update = 'all')
-            self.isActive = False
-            self.status_logger.info('Finished...')
+        self.status_logger.info('Execute all...')
+#        self.isActive = True
+        self.Cells = []
+        self._execute(update = 'all')
+#        self.isActive = False
+        self.status_logger.info('Finished...')
 
     def _execute_connected(self):
-        if not self.Cells and not self.isActive:
+        if not self.Cells:
             self.status_logger.info('Execute connected...')
-            self.isActive = True
+#            self.isActive = True
             self._execute(update = 'connected')
-            self.isActive = False
-            self.status_logger.info('Finished...')
+#            self.isActive = False
         else: 
             self.socketio.emit('show all', self._convert())
-        time.sleep(.5)
 
     def _restart_kernel(self):
         self.status_logger.info('Restarting kernel...')
         kernel_manager.restart_kernel()
         while True:
             try:
-                io_msg_content = self.jupyter_client.get_iopub_msg()['content']
+                io_msg_content = self.jupyter_client.get_iopub_msg(timeout=3)['content']
                 time.sleep(.01)
 
             except queue.Empty:
@@ -125,7 +128,6 @@ class jupyter_client_wrapper:
         else:
             return False
 
-
     '''
     -------------------------------
     Execution - Main - Helpers
@@ -141,8 +143,6 @@ class jupyter_client_wrapper:
         self.status_logger.info('Showing...')
         self.socketio.emit('show all', self._convert())
         '''
-        Send a list of the cells that will run to the
-        client so it can show what is loading.
         '''
         self.status_logger.info('Executing...')
         self.executionThread = threading.Thread(target = self._executeThread)
@@ -154,15 +154,22 @@ class jupyter_client_wrapper:
         Update the 'Cells' variable with new data from
         the Thebe file
         '''
-        self.logger.info('file content: %s'%(fileContent,))
 
         # 'cells' is for the new cells
         cells = []
 
         # Ignore code that comes before the first delimiter
         ignoreFirst = self._ignoreFirst(fileContent)
+        self.lUpdate.info('---------------')
+        self.lUpdate.info('ignoreFirst: %s'%(ignoreFirst,))
+        # True cell count, used because sourceCount
+        # can be unreliable
+        cellCount = 0
 
-        for cellCount, source in enumerate(fileContent.split(Constant.CellDelimiter)):
+        for sourceCount, source in enumerate(fileContent.split(Constant.CellDelimiter)):
+
+            self.lUpdate.info('---------------')
+            self.lUpdate.info('Cell count: %s'%(cellCount,))
             # Ignore the first source if a cell delimiter
             # does not preceed it
             if ignoreFirst:
@@ -171,18 +178,26 @@ class jupyter_client_wrapper:
 
             #Split source by line
             source = source.splitlines(True)
+            self.lUpdate.info('Source length: %s'%(len(source),))
 
             if self._validSource(source):
                 # Get copy of cell initially populated
                 cell = copy.deepcopy(Constant.Cell)
 
-
                 cell = self._setMarkdown(source, cell)
+                self.lUpdate.info('Changed: %s'%(cell['changed'],))
                 cell = self._setChanged(source, cell)
+                self.lUpdate.info('Changed: %s'%(cell['changed'],))
 
-                # This activates if the user clicks the run all button
+                # Handle front end buttons
                 if update == 'all':
                     cell['changed'] = True
+                elif type(update) == list:
+                    if cellCount in update:
+                        cell['changed'] = True
+                else:
+                    pass
+                self.lUpdate.info('Changed: %s'%(cell['changed'],))
 
                 # Set execution counter if it exists previously
                 try:
@@ -190,29 +205,26 @@ class jupyter_client_wrapper:
                 except IndexError:
                     pass
                 cells.append(cell)
+                cellCount  += 1
 
         self.Cells = cells
-        self.execute_logger.info('Cells: "%s"'%(str(self.Cells)[0:20],))
+        self.status_logger.info('Changed cells: %s'%([x['changed'] for x in self.Cells],))
 
     def _executeThread(self):
         '''
         Run the newly changed cells and return their output.
         '''
-        self.logger.info('------------------\nOutput before update\n-------------------------------\n%s'%([cell['outputs'] for cell in self.Cells],))
+        self.status_logger.info('Inside execute thread...')
         self.Cells = self._runNewCells()
-        self.logger.info('------------------\nOutput after update\n-------------------------------\n%s'%([cell['outputs'] for cell in self.Cells],))
-#        self.executions = Database.getExecutions(self.fileLocation)
         self.executions += 1
-        self.logger.info('The number of code executions is %d' % self.executions)
-#        self.socketio.emit('show all', self._convert())
 
         '''
         Update the database with the fresh code.
         And outputs.
         '''
-#        Database.setActive(self.fileLocation, False)
 #        Database.update(self.fileLocation, self.Cells, GlobalScope, LocalScope, executions)
         self._updateIpynb()
+        self.status_logger.info('Execution thread finished...')
     '''
     -------------------------------
     Actual execution
@@ -235,8 +247,10 @@ class jupyter_client_wrapper:
             # Run changed code if it is not markdown
             # and no prior cell has triggered an error
             if cell['changed']:
+
                 self.socketio.emit('message', 'Running cell #%s...'%(cellCount))
                 self.socketio.emit('loading', cellCount)
+                cell['changed'] = False
                 if cell['cell_type'] != 'markdown' and not kill:
                     self.logger.info('\n------------------------\nRunning cell #%s\nIn directory: %s\nWith code:\n%s\n-------------------------------'%(cellCount, os.getcwd(), cell['source']))
 
@@ -253,37 +267,36 @@ class jupyter_client_wrapper:
                     cell['outputs'] = outputs
 
                     # How does ipython do this?
-                    cell['changed'] = False
                     cell['execution_count'] = cell['execution_count'] + 1
-                    self.logger.info('exe co: %s'%(cell['execution_count'],))
 
             # Append run cell the new cell list
             newCells.append(cell)
 
         # Stop the front end loading
         self.socketio.emit('stop loading')
-
+        self.status_logger.info('End of runAllCells...')
         return newCells
 
     def _jExecute(self, code):
         '''
         '''
 
+        self.status_logger.info('Inside jExecute thread...')
         code = ''.join(code)
 
         # Execute the code
         msg_id = self.jupyter_client.execute(code)
 
-        # Collect the response payload
-        # reply = self.jupyter_client.get_shell_msg(msg_id)
-
         # Get the execution status
         # When the execution state is "idle" it is complete
-        io_msg_content = self.jupyter_client.get_iopub_msg(timeout=1)['content']
+        t = True
+        try:
+            io_msg_content = self.jupyter_client.get_iopub_msg(timeout=1)['content']
 
-        # We're going to catch this here before we start polling
-        if 'execution_state' in io_msg_content and io_msg_content['execution_state'] == 'idle':
-            self.logger.debug('No output!')
+        except queue.Empty:
+            t = False
+
+        self.status_logger.info('After first message in jExecute...')
 
         # Initialize the temp variable
         temp = {}
@@ -293,12 +306,12 @@ class jupyter_client_wrapper:
 
         # Continue polling for execution to complete
         # which is indicated by having an execution state of "idle"
-        while True:
+        while t:
             # Save the last message content. This will hold the solution.
             # The next one has the idle execution state indicating the execution
             # is complete, but not the stdout output
             temp = io_msg_content
-
+            self.execute_logger.info(temp)
             # Check the message for various possibilities
             if 'data' in temp: # Indicates completed operation
                 if 'image/png' in temp['data']:
@@ -335,8 +348,7 @@ class jupyter_client_wrapper:
 
             # Poll the message
             try:
-                self.logger.info('Retrieving message...')
-                io_msg_content = self.jupyter_client.get_iopub_msg()['content']
+                io_msg_content = self.jupyter_client.get_iopub_msg(timeout=1)['content']
                 time.sleep(.1)
 
                 if 'execution_state' in io_msg_content and io_msg_content['execution_state'] == 'idle':
@@ -345,6 +357,7 @@ class jupyter_client_wrapper:
             except queue.Empty:
                 break
 
+        self.status_logger.info('End of jExecute thread...')
         return outputs
 
     '''
@@ -446,6 +459,7 @@ class jupyter_client_wrapper:
         '''
         Detect if a cell has been changed
         '''
+
         try:
             x = self._getSourceList().index(source)
             cell = self.Cells[x]
@@ -463,13 +477,11 @@ class jupyter_client_wrapper:
 
         # Detect if cell is Markdown
         if source[0] == 'm\n':
-            # Remove the markdown identifier
-            source.pop(0)
             # Set cell as markdown
             cell['cell_type'] = 'markdown'
-        else:
-            # Remove the new line after the delimiter
-            source.pop(0)
+
+        # Remove the new line after the delimiter
+        source.pop(0)
 
         #Set sourceCode
         cell['source'] = source
@@ -489,6 +501,7 @@ class jupyter_client_wrapper:
         '''
         Write the new changes to the ipynb file.
         '''
+        self.status_logger.info('Updating .ipynb...')
         cCells = copy.deepcopy(self.Cells)
 
         # Remove extra attributes created by thebe.
@@ -573,3 +586,11 @@ class jupyter_client_wrapper:
                         extra_args = pdoc_args)
 
         return tempCells 
+    def _isActive(self):
+        if  self.executionThread:
+            if self.executionThread.is_alive():
+                return True
+            else:
+                return False
+        else:
+            return False
