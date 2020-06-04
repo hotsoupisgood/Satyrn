@@ -1,5 +1,7 @@
 <head>
 <title>Thebe</title>
+<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
 <script type="text/javaScript">
 	window.MathJax = {
     tex2jax: {
@@ -41,6 +43,7 @@ src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.3/MathJax.js?config=TeX-
 <header>
 <div id = "logo">
 	Thebe
+	<img class = 'icon' src = "{{ url_for('static', filename='favicon.ico') }}">
 </div>
 <button v-on:click = 'runAll' title = "Run all cells">&#x267A;</button>
 <transition-group name = "messages" tag = "div">

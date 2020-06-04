@@ -30,7 +30,8 @@ handler = logging.StreamHandler(None)
 root.addHandler(handler)
 logger = Logger.getLogger('sockets.log', __name__)
 logging.StreamHandler(stream=None)
-#logging.basicConfig(level = logging.INFO)
+if not args.getDebug():
+    logging.disable(logging.INFO)
 
 '''
 Set some headers and get and send css for all of the HtmlFormatter components.
@@ -89,5 +90,9 @@ def run_all(index):
 Run flask and socketio.
 '''
 def main():
-    ledger=[]
-    socketio.run(app, port=port, debug=False)
+    try:
+        print('Running Thebe server on port %s...\nTo access Thebe, go to: localhost:%s\n\nTo quit, press Ctrl-c twice...'%(port,port))
+        socketio.run(app, port=port, debug=False)
+    except KeyboardInterrupt:
+        print("Shutdown requested...exiting")
+        socketio.stop()

@@ -102,6 +102,7 @@ class jupyter_client_wrapper:
 #            self.isActive = True
             self._execute(update = 'connected')
 #            self.isActive = False
+            time.sleep(2)
         else: 
             self.socketio.emit('show all', self._convert())
 
@@ -186,17 +187,14 @@ class jupyter_client_wrapper:
 
                 cell = self._setMarkdown(source, cell)
                 self.lUpdate.info('Changed: %s'%(cell['changed'],))
-                cell = self._setChanged(source, cell)
-                self.lUpdate.info('Changed: %s'%(cell['changed'],))
 
                 # Handle front end buttons
                 if update == 'all':
-                    cell['changed'] = True
-                elif type(update) == list:
-                    if cellCount in update:
-                        cell['changed'] = True
+                    cell = self._setChanged(source, cell, force_change = True)
+                elif type(update) == list and cellCount in update:
+                        cell = self._setChanged(source, cell, force_change = True)
                 else:
-                    pass
+                    cell = self._setChanged(source, cell)
                 self.lUpdate.info('Changed: %s'%(cell['changed'],))
 
                 # Set execution counter if it exists previously
@@ -455,18 +453,24 @@ class jupyter_client_wrapper:
         return output
         
 
-    def _setChanged(self, source, cell):
+    def _setChanged(self, source, cell, force_change = False):
         '''
         Detect if a cell has been changed
         '''
 
-        try:
-            x = self._getSourceList().index(source)
-            cell = self.Cells[x]
-
-        except ValueError:
+        if force_change:
             cell['changed'] = True
             cell['last_changed'] = time.strftime("%x %X", time.gmtime())
+            cell['outputs'] = []
+            
+        else:
+            try:
+                x = self._getSourceList().index(source)
+                cell = self.Cells[x]
+
+            except ValueError:
+                cell['changed'] = True
+                cell['last_changed'] = time.strftime("%x %X", time.gmtime())
 
         return cell
 

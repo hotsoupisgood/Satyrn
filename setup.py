@@ -1,13 +1,14 @@
 from setuptools import setup, find_packages
 
-def readme():
-        with open('README.rst') as f:
-                    return f.read()
+with open("README.md", "r") as fh:
+    long_description = fh.read()
 
 setup(
         name='thebe',
-        version='0.0.4.3',
+        version='0.0.4.6',
         description='Automatically runs and displays python code in browser.',
+        long_description=long_description,
+        long_description_content_type="text/markdown",
         author_email='hairyhenry@gmail.com',
         url='https://github.com/hotsoupisgood/Satyrn',
         include_package_data=True,
